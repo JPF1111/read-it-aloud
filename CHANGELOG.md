@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Chrome:** Support footer copy refreshed — now references all three BMaC tiers gracefully ("drop a coffee, become a monthly supporter, or settle the tab for life") via a single "Support the project" button.
 - **Chrome:** BMaC slug cased to `ReadItAloud` to match the canonical URL.
+- **Chrome:** Manifest description rewritten to lead with the accessibility audience — "Text to speech for any webpage. Built for ADHD, dyslexia & tired eyes. Natural ElevenLabs voices with full playback controls." This is the text the Chrome Web Store displays as the listing summary.
 
 ---
 

@@ -1,0 +1,6 @@
+# GitHub Pages (Jekyll) configuration
+# Exclude internal working files from the published site.
+exclude:
+  - .sponsor-profile-content/
+  - CONTRIBUTING.md
+  - SECURITY.md
