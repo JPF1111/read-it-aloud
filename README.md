@@ -79,9 +79,23 @@ The full privacy policy lives at [PRIVACY.md](./PRIVACY.md). The short version:
 Read It Aloud is free and built by one person on the side. If it has helped you focus, learn, work, or just rest your eyes, support keeps development going.
 
 - [☕ Buy Me a Coffee](https://buymeacoffee.com/ReadItAloud) — one-time tip, monthly Supporter ($3/mo), or Kindred lifetime support ($33)
-- [💚 GitHub Sponsors](https://github.com/sponsors/JPF1111) — recurring support through GitHub
+- [💚 GitHub Sponsors](https://github.com/sponsors/JPF1111) — monthly tiers: **Backer** ($10), **Operator** ($50), **Council** ($250), **Patron** ($1,000). Each tier adds tangible benefits — README recognition, release-note credit, direct roadmap input, quarterly calls. Full tier details on the [Sponsors profile](https://github.com/sponsors/JPF1111)
 
 Every contribution funds development time, ElevenLabs credits for testing new voices and features, and the next round of accessibility improvements.
+
+---
+
+## Sponsors
+
+Read It Aloud exists because of the people who back it directly. Their support is what keeps the work free, private, and shipping across every browser.
+
+<!-- SPONSORS-LIST-START -->
+
+_Be the first._ Become a sponsor at [github.com/sponsors/JPF1111](https://github.com/sponsors/JPF1111) and your name lands here on the next release.
+
+<!-- SPONSORS-LIST-END -->
+
+The current sponsor tiers — Backer, Operator, Council, and Patron — and what each one funds are documented on the [GitHub Sponsors profile](https://github.com/sponsors/JPF1111).
 
 ---
 
