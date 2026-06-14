@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.4] — 2026-06-12
+
+### Fixed
+- **Chrome:** **Stop button no longer locks the player.** Previously, pressing Stop discarded the playback session, leaving play, skip, and seek unresponsive until the player was closed and the text re-selected. Stop now halts playback and rewinds to the start while keeping the generated audio — press play to replay, or scrub and skip freely. (In-flight ElevenLabs requests are still aborted on Stop to protect your quota.)
+- **Chrome:** **Dark-mode contrast fixes.** The play/pause icon was nearly invisible against the control button in dark mode — now renders clearly. Field borders, the text panel edge, and the progress track were too faint against the dark background and are now visible.
+
+---
+
 ## [1.3.3] — 2026-06-12
 
 ### Changed
