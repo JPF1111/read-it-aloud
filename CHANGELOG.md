@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.5] — 2026-06-27
+
+### Added
+- **Anonymous uninstall feedback.** When the extension is removed, the browser opens a short, optional survey asking why. If you submit it, an anonymous reason, an optional comment, and the version number are recorded to help prioritize fixes and features — no personal data, no identifiers. Closing the page sends nothing.
+
+### Changed
+- **Privacy policy updated** to disclose the optional, anonymous uninstall feedback endpoint and exactly what it records.
+
+---
+
 ## [1.3.4] — 2026-06-12
 
 ### Fixed

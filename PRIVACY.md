@@ -1,20 +1,22 @@
 # Privacy Policy — Read It Aloud
 
-**Last updated:** June 12, 2026
+**Last updated:** June 27, 2026
 **Effective:** When you install or update to v1.3.0 or later
 
 ## Summary in plain English
 
-- We don't run a server. There is no Read It Aloud backend.
-- The extension takes text **you select** on a web page and sends it to
-  **ElevenLabs** so they can generate audio for you. That's the only data
-  that leaves your browser.
+- The extension has **no backend for its core features**. The text you select
+  is sent to **ElevenLabs** to generate audio — that's the only data that leaves
+  your browser while you use it.
 - Your ElevenLabs **API key** is stored locally in your browser
-  (`browser.storage.local` / `chrome.storage.local`) and is sent **only**
-  to ElevenLabs' servers (`https://api.elevenlabs.io`).
-- We do **not** collect analytics, telemetry, crash reports, or any
-  identifier about you. We do not have a database. We do not sell or
-  share anything because we don't have anything.
+  (`browser.storage.local` / `chrome.storage.local`) and is sent **only** to
+  ElevenLabs' servers (`https://api.elevenlabs.io`).
+- We don't run analytics, telemetry, or crash reporting, and we hold no
+  identifiers about you.
+- The **one** time anything reaches us is if you **choose** to submit the
+  optional, anonymous **uninstall survey** — see "Uninstall feedback" below.
+  It contains no personal information.
+- We never sell or share your data.
 
 ## What data the extension handles
 
@@ -25,25 +27,48 @@
 | Your voice & playback settings (voice ID, model, speed, stability, etc.) | `storage.local` on your device only | `api.elevenlabs.io` as part of TTS request body | Required so generation matches your preferences |
 | Generated audio bytes | RAM and the offscreen audio document; discarded when you stop or close the tab | Stays on your device | Played back to you, optionally downloadable |
 
-Nothing is sent to any other party. The extension makes no network calls
-to any host except `api.elevenlabs.io`.
+While the extension is running, it makes no network calls to any host except
+`api.elevenlabs.io`.
+
+## Uninstall feedback (optional & anonymous)
+
+When you remove the extension, your browser opens a short feedback page asking
+why you uninstalled. This is **completely optional** — closing the page sends
+nothing.
+
+If you **choose** to submit it, the following is sent and recorded as anonymous
+feedback to help us improve the extension:
+
+- the **reason** you select (from a fixed list),
+- an **optional free-text comment**, if you write one,
+- the **extension version** you were on.
+
+That's all. The submission is **anonymous** — we do not ask for or store your
+name, email, IP address, API key, browsing data, or any other identifier, and
+there is no way for us to tie a response back to you. The feedback page is a
+separate web page opened by your browser (not the extension), passed through a
+small write-only endpoint (a Cloudflare Worker) and recorded as an anonymous
+note on GitHub. It is used only to prioritize fixes and features.
 
 ## What we do NOT collect
 
 - No analytics or telemetry
-- No browsing history, page content, or URLs (beyond what you select)
+- No browsing history, page content, or URLs (beyond what you select to read)
 - No personally identifiable information
 - No advertising identifiers
 - No cookies, fingerprints, or device IDs
-- No data is sent to the extension author
+- No identifying data is ever sent to the extension author — the only thing we
+  can receive is the anonymous, optional uninstall feedback described above
 
 ## Third-party services
 
-The selected text and your voice settings are sent to **ElevenLabs**,
-the TTS provider. ElevenLabs is governed by their own privacy policy:
-<https://elevenlabs.io/privacy>. You hold an account directly with
-ElevenLabs (this extension uses *your* API key) and your relationship
-with them is between you and ElevenLabs.
+- **ElevenLabs** — the TTS provider. Your selected text and voice settings are
+  sent here to generate audio. ElevenLabs is governed by its own privacy policy:
+  <https://elevenlabs.io/privacy>. You hold an account directly with ElevenLabs
+  (this extension uses *your* API key); that relationship is between you and them.
+- **Cloudflare & GitHub** — used only to carry and store the anonymous uninstall
+  feedback described above, and only if you choose to submit it. They never
+  receive your reading content, API key, or any identifier.
 
 ## Permissions and what they're for
 
@@ -62,6 +87,7 @@ The exact set of permissions may vary slightly by browser due to platform differ
 - **Reset your data** at any time from the extension settings.
 - **Revoke your ElevenLabs API key** in your ElevenLabs dashboard at
   any time. The extension will stop working immediately.
+- **Skip the uninstall survey** simply by closing the page — nothing is sent.
 
 ## Changes to this policy
 
