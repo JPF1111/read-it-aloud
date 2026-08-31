@@ -24,6 +24,33 @@ other source is a defect: flag it.
 | **Ceres intake relay** | LaunchAgent `io.ceres.memory.intake-relay` |
 | **Register archives** | In the governed Obsidian campaign folder; indexed from the active register |
 
+## MYLO Health Systems
+
+Recorded 2026-08-31. The venture had **no** entry in this file, on Project Desk, or
+anywhere under `governance/` — and one of its two repos is not discoverable by name.
+An agent asked to act on "the MYLO repo" had no way to resolve which repo was meant,
+and got it wrong twice on 2026-08-31 before JP corrected it by hand.
+
+| Thing | Path |
+|---|---|
+| Documentation hub | `~/dev/code/mylo-documentation-hub` → `github.com/FinTechGlobalSolutions/mylo-documentation-hub` |
+| Legacy systems research | `~/dev/code/legacy-systems-research` → `github.com/FinTechGlobalSolutions/legacy-systems-research` |
+
+**`legacy-systems-research` IS a MYLO repo** despite the name — it is the clean-room
+research hub for legacy health plan platforms (QNXT and adjacent payer systems). Its
+GitHub description was set on 2026-08-31 to name MYLO so the association is
+discoverable; do not remove it. Public sources only — the repo's own README forbids
+ingesting PHI, PII, customer-confidential data, NDA artifacts, or internal exports.
+
+Both repos are private, both are governed by `bin/govsync`, and both sit under the
+org-level `protect-main` ruleset like the rest of the estate. `legacy-systems-research`
+additionally carried repo-level branch protection requiring 1 approving review, which
+no peer repo had; that was removed 2026-08-31 to bring it in line, leaving
+`protect-main` as the single control.
+
+No Project Desk project exists for MYLO. That is a gap, not a ruling — if MYLO work
+starts being tracked, give it a project and a prefix per `project-desk.md` §6.
+
 ## DEAD PATHS — never write, never reference, never recreate
 
 - ❌ `~/Documents/DEV/` — **entire tree deleted 2026-07-13.** Any reference is a defect.
