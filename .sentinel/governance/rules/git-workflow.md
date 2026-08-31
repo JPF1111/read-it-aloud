@@ -196,6 +196,81 @@ exit 0; foreign `release` refused; `takeover` attributed), and the report's firs
 found real drift — both then-existing QB worktrees (`CC082226-quorumbooks-app-pd-pointer`,
 `CC082526-qb10-ws6-templates`) running unregistered.
 
+## Closeout guard — mechanical block on lazy/lossy closeout (ratified 2026-08-26)
+
+Every governance control above this line about PR review and merge discipline was
+enforceable only by an agent choosing to follow it — nothing stopped a session from calling
+`ceres agent closeout` while sitting on unmerged/unpushed commits, or after marking a PR
+review thread "resolved" with no reply (dismissed, not actually adopted/deferred/declined).
+JP, 2026-08-26: "prevent lazy agents or lost work." This closes that gap mechanically, same
+gate-receipt/custos pattern as everything else in this file.
+
+**Mechanics:**
+- `bin/hook-closeout-guard.sh` (+ `.py`) — a Claude Code `PreToolUse` hook wired machine-wide
+  in `~/.claude/settings.json`, matcher `mcp__ceres__agent_closeout`. Before any session's
+  closeout call reaches Ceres, it checks the git repo at the hook's `cwd`:
+  1. **Merged and pushed** — `HEAD` must be an ancestor of `origin/<default-branch>` and the
+     working tree must be clean. Uncommitted, unpushed, or unmerged work blocks closeout.
+  2. **PR thread disposition** — for PRs authored by the session (heuristic: `gh pr list
+     --search author:@me`, updated within the last 12h — not session-ID-scoped, gh has no
+     such concept; generous window chosen to bias toward catching real misses over false
+     confidence), every review thread must be resolved AND have a reply. A thread marked
+     resolved with zero reply reads as dismissed/ignored, not dispositioned, and blocks.
+  An OPEN PR in that window also blocks (not merged yet). A CLOSED-without-merge PR is
+  reported informationally only — this control cannot mechanically verify "a stated reason
+  was recorded," so it doesn't try to gate on it.
+- Fails OPEN (exit 0) on any internal error (not a git repo, `gh` unauthenticated, network
+  failure) with a warning printed — this is a tripwire-plus-audit control, not a filesystem
+  permission, same posture as the worktree-lock guard above.
+
+**Override — verified, never a matter of trust (`bin/closeout-override.sh`, revised same
+day):** JP, on first seeing this design: "I don't know what's right or wrong so I shouldn't
+be the approver" — an override that runs on the issuer's unverified word puts exactly the
+wrong person in the loop. So `issue` now REQUIRES `--repo owner/name --pr N` and mechanically
+verifies via `gh pr view` that the PR is actually `MERGED` before it will produce a code —
+it refuses outright if the PR is still open or was closed unmerged. The orchestrator's job is
+therefore not "vouch for this" but "actually merge it, then the tool confirms that for you."
+`--owner`/`--reason`/`--session-id`/`--ttl-minutes` (default 120min) are still required for
+attribution and scope, but they no longer stand in for verification. The guard consumes the
+override exactly once (a second closeout attempt on the same session re-blocks), and logs
+consumption — who authorized it, why, which PR was confirmed merged, and that it was actually
+used — not just that it was issued. `closeout-override.sh status` lists
+issued/consumed/expired overrides for audit.
+
+## Open-work tracker — running count of unpushed/unmerged state (ratified 2026-08-26)
+
+JP: "Ceres should keep a running count of open work which hasn't been pushed" — so visibility
+into abandoned/lost work doesn't depend on any single session's closeout attempt catching it.
+
+`bin/open-work-report.sh` scans every repo listed in `governance/rules/open-work-roots.txt`
+plus every active worktree under the roots in `worktree-roots.txt`, and for each checks: any
+uncommitted/staged changes, any local commits not yet on `origin/<default-branch>`, and
+whether the current branch (if not the default) is actually merged into it. Two-layer output,
+same pattern as every other report in this file:
+1. A dated local file, `logs/open-work/report-<date>.md`.
+2. A forced `ceres queue submit` record (type `open_work_snapshot`) — counts and per-repo
+   findings, so the running total is durably queryable in governed memory, not just a file
+   nobody opens.
+
+Scheduled daily via LaunchAgent `com.sentinel.open-work-report` (07:29). Live-tested
+2026-08-26: found real, verified open work on first run — 6 repos with an uncommitted
+`AGENTS.md`/`.sentinel/governance/.generated-by-sentinel` regeneration (a legitimate govsync
+side-effect of the sentinel `main` commit advancing when this same session's PR #17 merged),
+plus the sentinel repo's own in-flight changes for this feature. Not silently fixed across
+unrelated repos — reported, left for their own owning sessions/PR flow.
+
+**Honest limits, stated so this isn't mistaken for airtight:** the PR-ownership heuristic is
+time-window based, not session-scoped (gh has no session concept) — a PR someone else
+touches in the same 12h window could be caught by a different session's closeout attempt; a
+PR this session touched outside the window would be missed. This binds Claude Code sessions
+only, same as every other `PreToolUse` guard in this file.
+
+**Build-time evidence (2026-08-26):** live-tested end to end against real repos and a real
+GitHub PR (sentinel#17) — dirty-tree block, GraphQL thread-resolution query (caught and fixed
+a real schema error: `PullRequestReviewThread` has no `url` field), override issue → consume
+→ re-block cycle, and a real `hashlib` import bug caught by the guard's own fail-open path
+during testing (proving fail-open works, then fixed so the real check runs).
+
 ## Session close-out — mandatory metrics report (canonical, ratified 2026-07-30)
 
 **Trigger — archival only.** This report is NOT part of routine close-out or a session going
@@ -351,10 +426,11 @@ means nothing is owed in either direction.
   conversation thread on the PR is unresolved, Copilot's included. This applies
   org-wide (every repo under the `protect-main` ruleset), not just `quorumbooks`.
   aspirational (ratified 2026-08-16, restates the `AGENTS.md` §2 rule: never report CI
-  green until `status: completed` + `conclusion: success`).** Local pre-push gates (the 14-step
-  `pre-push` hook) are a fast mirror of CI, not a substitute for it — they run a
-  narrower set of checks (no E2E, no full `pnpm test`) specifically so they stay fast
-  enough to run on every push. "All 14 local gates passed" is not the same claim as "CI
+  green until `status: completed` + `conclusion: success`).** Local pre-push gates (the
+  quorumbooks `pre-push` hook — 15 steps as of qb-46, 2026-08-26, corrected here after Copilot
+  review caught this doc still saying 14) are a fast mirror of CI, not a substitute for it —
+  they run a narrower set of checks (no E2E, no full `pnpm test`) specifically so they stay
+  fast enough to run on every push. "All local gates passed" is not the same claim as "CI
   is green" and must never be reported as if it were. Before writing "done," "shipped,"
   or "ready to merge" anywhere (chat, a PR description, a vault note), run
   `gh run list` / `gh pr checks` against the actual PR/commit and confirm
