@@ -69,6 +69,25 @@ starts being tracked, give it a project and a prefix per `project-desk.md` §6.
 - ❌ `quorum-marketing` / `quorumbooks-site` as *source* repos (`quorumbooks-web` is source;
   `quorumbooks-site` is the publish target only).
 
+## Governance coverage — repos ruled on individually (JP, 2026-08-31)
+
+Three repos under `~/dev/code` were dirty after every govsync run for structural reasons.
+Ruled on rather than left ambiguous:
+
+- ✅ **`~/dev/code/Distyll`** and **`~/dev/code/vigilum`** — GOVERNED, local-only. Neither
+  has a GitHub remote (verified via `gh repo view` under both `FinTechGlobalSolutions` and
+  `JPF1111` — neither resolves). `govsync` writes their `AGENTS.md`/`.sentinel/` normally;
+  the generated content is committed locally on each repo's own default branch. There is no
+  PR to open and no remote to push to — a local commit is the terminal state for these two
+  until a remote exists, at which point they follow the normal branch → PR → merge flow like
+  every other governed repo.
+- ⛔ **`~/dev/code/slugthugshield-v3-audit-old`** — EXEMPT (not deleted, still on disk and in
+  active use), like `vault` is exempt from the
+  org `protect-main` ruleset. Its GitHub default branch is `SlugThugShell`, not `main` — a
+  named working branch, not a stable trunk to generate law onto. Encoded as a name-based skip
+  in `bin/govsync`'s `EXEMPT_REPOS` array. If this repo ever gets a real default branch, lift
+  the exemption and let it be governed like its peers.
+
 ## Hard placement constraints (learned, non-negotiable)
 
 - **Sentinel MUST live at `~/dev/sentinel`, NOT under `~/Documents`.** macOS TCC blocks

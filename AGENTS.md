@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      74a6f6d
-     body-sha256: 28a23c39a7c8833f74a7cfd0498822581abae1ef21964180e953f47c5be1c22f
+     commit:      149b919
+     body-sha256: 46fd6d9621f431a8ac7660ae9ec53ec78eb00a5acfd13129e20c070c3cabdc0e
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-08-31T12:23:29Z
+     generated:   2026-09-01T13:40:29Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve steps 1-5 against companion-rules above.
@@ -364,5 +364,3 @@ fabricated path written into a commission propagates to every agent that reads i
 is not a license to mine it for specifications. If material from a document is going to
 become spec, every factual claim in it gets probed first, and anything that fails the
 probe gets flagged to JP rather than quietly dropped or quietly kept.
-
-@/Users/jpfinley/.codex/RTK.md
