@@ -131,6 +131,35 @@ shared-working-tree collision class is eliminated structurally, not by disciplin
 - If a checkout has uncommitted work that cannot be attributed to a known in-flight
   session, STOP and surface it — do not commit, stash, or move it on an assumption.
 
+**Coverage extended beyond quorumbooks (ratified 2026-09-07).** The mechanical guard above
+was quorumbooks-only until a live collision proved the gap: on 2026-09-07, at least four
+concurrent Claude Code sessions were found editing `~/dev/code/memory-os-installer`'s primary
+checkout directly and simultaneously (no worktrees), coordinated by a background multi-session
+campaign. One session's uncommitted work was silently overwritten mid-edit by another session's
+commit — no data was actually lost only because the two sessions had independently converged on
+equivalent fixes; this was luck, not protection. The same `scripts/git-hooks/pre-commit` /
+`scripts/install-hooks.sh` pattern (identical mechanism, each repo's own canonical path
+hardcoded per the PR #110 scoping rationale above) is now also live in:
+
+| repo | canonical primary checkout | remote |
+|---|---|---|
+| `sentinel` | `~/dev/sentinel` | yes — this is the law repo itself |
+| `memory-os-installer` | `~/dev/code/memory-os-installer` | yes — proven live collision, 2026-09-07 |
+| `quorumbooks-app` | `~/dev/code/qb/quorumbooks-app` | yes |
+| `quorumbooks-web` | `~/dev/code/qb/quorumbooks-web` | yes |
+| `quorumbooks-cockpit` | `~/dev/code/qb/quorumbooks-cockpit` | yes |
+| `Distyll` | `~/dev/code/Distyll` | no — local commit is the terminal state (canonical-paths.md) |
+| `vigilum` | `~/dev/code/vigilum` | no — local commit is the terminal state (canonical-paths.md) |
+
+Each repo's hook and installer are tracked in that repo's own `scripts/git-hooks/` and
+`scripts/install-hooks.sh` (not centralized here — mirrors quorumbooks' existing, already-proven
+pattern; the anti-sprawl rule in AGENTS.md §0 governs *policy/law text*, not per-repo
+implementation tooling that already varies by repo convention). A newly-registered governed
+repo with a canonical primary checkout should get the same treatment — generate its hook from
+this same template, install live, seed-test both the blocked and allowed paths, then land the
+tracked files via a worktree PR (or a local merge for a no-remote repo) — same as every other
+repo in the table above.
+
 **Interim rule until every session is migrated to a worktree:** explicit-path staging
 remains mandatory on every commit — stage owned paths only, verify `git status` before
 committing, never `git add .` / `-A` / `-a`. This is what prevents collisions until
