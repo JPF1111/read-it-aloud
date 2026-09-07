@@ -8,7 +8,7 @@ other source is a defect: flag it.
 
 | Thing | Path |
 |---|---|
-| **Monorepo (build target)** | `~/dev/code/qb/quorumbooks` → `github.com/JPF1111/quorumbooks` |
+| **Monorepo (build target)** | `~/dev/code/qb/quorumbooks` → `github.com/FinTechGlobalSolutions/quorumbooks` (corrected 2026-09-07 on JP's instruction; the `JPF1111/quorumbooks` remote named here before is not where the repo lives) |
 | Marketing site (Astro 5 + Tailwind v4) | `~/dev/code/qb/quorumbooks-web` |
 | App | `~/dev/code/qb/quorumbooks-app` |
 | Cockpit | `~/dev/code/qb/quorumbooks-cockpit` |
@@ -51,6 +51,23 @@ no peer repo had; that was removed 2026-08-31 to bring it in line, leaving
 No Project Desk project exists for MYLO. That is a gap, not a ruling — if MYLO work
 starts being tracked, give it a project and a prefix per `project-desk.md` §6.
 
+## ElevenLabs — Read It Aloud (recorded 2026-09-07, JP: "they are in JPF1111 … update the path correctly, don't move repo locations")
+
+| Thing | Path |
+|---|---|
+| Extension source | `~/dev/code/elevenlabs-extension/read-it-aloud` → `github.com/JPF1111/read-it-aloud` (public) |
+| Feedback tracker | `~/dev/code/elevenlabs-extension/read-it-aloud-feedback` → `github.com/JPF1111/read-it-aloud-feedback` (private) |
+| Extension package | `~/dev/code/elevenlabs-extension/read-it-aloud-extension` → `github.com/FinTechGlobalSolutions/read-it-aloud-extension` |
+
+The first two live under JP's personal account, not the org. The automation identity most
+agent sessions run as (`gh auth status` → `QuorumBooks`, an org token) cannot see them at all —
+`gh repo view JPF1111/read-it-aloud` and `git fetch` both answer "not found", which on
+2026-09-07 was misread as the account no longer existing. It exists; switch identity before
+touching them (`gh auth switch -u JPF1111`, and for git pushes run with the gh credential
+helper: `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='!gh auth
+git-credential'`), then switch back to `QuorumBooks`. Neither JPF1111 repo carries a ruleset;
+land changes through a PR anyway (git-workflow.md). Do not move them into the org.
+
 ## DEAD PATHS — never write, never reference, never recreate
 
 - ❌ `~/Documents/DEV/` — **entire tree deleted 2026-07-13.** Any reference is a defect.
@@ -80,13 +97,31 @@ Ruled on rather than left ambiguous:
   the generated content is committed locally on each repo's own default branch. There is no
   PR to open and no remote to push to — a local commit is the terminal state for these two
   until a remote exists, at which point they follow the normal branch → PR → merge flow like
-  every other governed repo.
+  every other governed repo. **How that local commit is made (JP, 2026-09-07 — "don't care
+  what path, just resolve it"):** since the worktree-isolation guard rolled out with
+  sentinel#36, the primary checkout's pre-commit hook blocks direct commits there, so the
+  generated mirror is committed on a throwaway worktree branch and fast-forwarded into the
+  default branch (`git worktree add <tmp> -B chore/governance-sync-<commit> <default>` →
+  `govsync --repo <tmp> --apply` → commit there → `git merge --ff-only` in the checkout →
+  `git worktree remove`). No commit is created in the primary checkout, so the guard and
+  this ruling agree; `--no-verify` is not the answer.
 - ⛔ **`~/dev/code/slugthugshield-v3-audit-old`** — EXEMPT (not deleted, still on disk and in
   active use), like `vault` is exempt from the
   org `protect-main` ruleset. Its GitHub default branch is `SlugThugShell`, not `main` — a
   named working branch, not a stable trunk to generate law onto. Encoded as a name-based skip
   in `bin/govsync`'s `EXEMPT_REPOS` array. If this repo ever gets a real default branch, lift
   the exemption and let it be governed like its peers.
+
+- ⛔ **`~/dev/code/qb/quorumbooks-www`** — EXEMPT (**ruled 2026-09-07: JP delegated the call — "don't
+  care" — and the proposing session applied it**). It is
+  the rendered publish target of `quorumbooks-web` (project-desk.md §6: never edited directly), and
+  `quorumbooks-web`'s `publish.yml` replaces its entire tree with `dist/` via `rsync --delete` on
+  every publish. The govsync mirror landed there by its PRs #3–#6 was deleted by publish PRs #8
+  and #9 on 2026-09-07 within minutes of the next sync (#7, closed unmerged), and would be deleted
+  again on every future publish. Hostinger serves that tree, so a mirror there also risks
+  publishing standing law and this file at `quorumbooks.com/AGENTS.md` (404 as of 2026-09-07
+  16:50Z; whether it was served between 2026-08-26, when agent files were first committed there,
+  and 2026-09-07 is UNVERIFIED). Encoded as a name-based skip in `bin/govsync`'s `EXEMPT_REPOS`.
 
 ## Hard placement constraints (learned, non-negotiable)
 
