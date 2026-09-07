@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      149b919
-     body-sha256: 46fd6d9621f431a8ac7660ae9ec53ec78eb00a5acfd13129e20c070c3cabdc0e
+     commit:      492fbc2
+     body-sha256: b82873502ab3b707aadc615491bdaa035de2f503a825d42b5922d05345add9ef
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-09-01T13:40:29Z
+     generated:   2026-09-07T16:00:54Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve steps 1-5 against companion-rules above.
@@ -58,7 +58,9 @@ Read, in order:
 3. `governance/rules/git-workflow.md` — commits, push authority.
 4. `governance/rules/security-baseline.md` — secrets, destructive ops, injection.
 5. `governance/rules/project-desk.md` — Project Desk is an execution tracker under this
-   law, never law itself; its pointer lives in `CLAUDE.md`, never in `AGENTS.md` (symlink).
+   law, never law itself; its desk block lives in the repo's own `PROJECT_DESK.md`
+   (project-desk.md §3, corrected 2026-08-31) — never in `AGENTS.md` (symlink) and no
+   longer in `CLAUDE.md`.
 6. The repo's own `CLAUDE.md` for repo-specific canon (it defers to this file).
 
 ---
