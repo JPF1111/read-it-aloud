@@ -288,6 +288,15 @@ side-effect of the sentinel `main` commit advancing when this same session's PR 
 plus the sentinel repo's own in-flight changes for this feature. Not silently fixed across
 unrelated repos — reported, left for their own owning sessions/PR flow.
 
+**Landing is automated since 2026-09-08 (`bin/govland`).** JP: "govsync is supposed to do all
+of that itself." `govsync` only distributes files; `govland` lands them the way this file
+requires — a worktree branch `chore/governance-sync-<commit>`, an explicit-path commit of the
+generated files only, a PR, squash auto-merge on green, then the primary checkout is
+fast-forwarded and the worktree removed (fast-forward for repos with no remote; the two
+`JPF1111` repos are pushed under that identity and the CLI is switched back). `sentinel-service`
+runs it after every `govsync --apply` that wrote anything and reports `landed` / `land_failed`
+in `logs/service/governance-status.json`. First live run: 29 repos in one pass.
+
 **Honest limits, stated so this isn't mistaken for airtight:** the PR-ownership heuristic is
 time-window based, not session-scoped (gh has no session concept) — a PR someone else
 touches in the same 12h window could be caught by a different session's closeout attempt; a
