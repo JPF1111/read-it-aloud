@@ -82,7 +82,9 @@ rather than assert it against them.
 - **No duplicate twins.** Reuse the existing id; never mint a `-walk`/`-confirm`.
 - **Close with receipt.** Lead the close with what shipped + commit + how verified.
 - **Shape = story**, not changelog: opening paragraph (becomes Focus), then
-  `## Now`, `## Direction` — exact header words.
+  `## Now`, `## Direction` — exact header words. Since 4.12.0 an optional `## ROAD MAP`
+  (Now / Next / Later) sits directly after Direction; replace it on material change,
+  never append, and never mint it as a numbered issue.
 - **Secrets never enter the desk.** Refer to env-var or vault names. The MCP
   rejects recognizable credentials; do not test that.
 - **Issue ids are `qb-N`**, sequential, lowercase on write.
@@ -92,13 +94,29 @@ rather than assert it against them.
 `governance/rules/custos-manifest.json` entry `project_desk_contract`
 (class `remote_contract`) pins three probes against the live page:
 
-| probe | pinned (2026-08-31) |
+| probe | pinned (2026-09-08) |
 |---|---|
-| contract version | `4.10.0` |
-| PD protocol version | `10` |
-| block template sha256 | `11b6549696688d72fa5a71a0c5af4a3f65c7c00289e99054020d7f43a343de06` |
+| contract version | `4.12.0` |
+| PD protocol version | `12` |
+| block template sha256 | `4c34c892cf5d421a9e4ca3125df5e4abf08073fc6f44d0a2c517edf2af4a406f` |
 
-Re-pinned 2026-08-31 from `4.7.0` / `8` / `6f6f012345ad…`. Reason: the vendor shipped
+Re-pinned 2026-09-08 from `4.10.0` / `10` / `11b6549696…`. Reason: the vendor shipped 4.11
+and 4.12 (custos flagged the drift 2026-09-06). Diffed live against §3–§4 on 2026-09-08:
+**no local delta is contradicted.** New in 4.12.0, not yet reflected in §4: a separate
+**Return Queue** (`issueId + whyStopped`; only the current assignee may Return assigned
+work), **claim-before-work** (atomic in-progress claim, first writer wins, claim ≠
+assignee), two team roles (Team Member / Team Lead), a tier label on every rule
+(1 machine-enforced / 2 guidance / 3 prose), the "Idea Box" status retired into
+Discovery, and an optional `## ROAD MAP` section after Direction (Now / Next / Later,
+replaced on material change, never a numbered issue). The block must now be **staged on
+first access**: create `PROJECT_DESK.md` when absent — absence never means opt-out. The
+vendor also published a generator contract (block as MCP resource `atlier://repo-protocol`,
+per-section markers with their own SHA-256, `manifestHash` on every scan) — ask (a) of the
+2026-08-25 letter still did not ship as a desk-hosted block, but composition through
+`bin/govsync` is now the vendor-sanctioned path. One correction to §3: the `yieldsTo`
+array is served by `atlier_project_scan`'s manifest, not printed on `/contract`.
+
+Previous re-pin, 2026-08-31, from `4.7.0` / `8` / `6f6f012345ad…`. Reason: the vendor shipped
 4.8.0 then 4.10.0 within 48h of JP's 2026-08-25 letter, adopting four of its five asks
 — declared target filename, the host-owned-file prohibition, per-section hashes exposed
 through `atlier_project_scan`, and `repository-governance` in `precedence.yieldsTo`.
