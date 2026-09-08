@@ -134,8 +134,11 @@ immutable: mode `0444`, SHA-256 recorded in a manifest, Ceres integrity-verified
 preserved by backup. Corrections are new active entries that reference the archived record;
 archives are never edited, regenerated, renumbered, or tidied in place.
 
-Every vault register has an active target size of approximately 50KB. The trigger is
-surface-generic: any canonical vault register over the threshold rotates by its natural safe
+Every vault register has an active target size of approximately 100KB (raised from 50KB by
+JP on 2026-09-08 — the 50KB trigger re-armed within hours on busy days and blocked agent
+close-outs constantly; Ceres now rotates to roughly 80% of the trigger and a daily
+LaunchAgent runs `ceres retention rotate-due`, so rotation is no longer an agent chore).
+The trigger is surface-generic: any canonical vault register over the threshold rotates by its natural safe
 unit, not by a named allowlist. ID-keyed registers seal the oldest contiguous ID block.
 Chronological registers seal the oldest dated entries. Backlogs seal completed epics/slices
 only; open, in-flight, blocked, or active-BRD-referenced work remains active regardless of age.
@@ -157,7 +160,7 @@ sync, Git, backup, graph/search discovery, or Ceres integrity checks. Queue arch
 outside Git and cloud sync and are explicitly included in Ceres backups.
 
 Monitoring exposes queue depth, oldest item, failures, disk use, deferred encryption,
-quarantine age, unarchived processed count, active vault-register sizes against 50KB,
+quarantine age, unarchived processed count, active vault-register sizes against 100KB,
 and missing or unreadable archive manifests.
 
 ## Cutover evidence — transition lifted 2026-07-28
