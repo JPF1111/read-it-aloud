@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      fa856e9
-     body-sha256: b82873502ab3b707aadc615491bdaa035de2f503a825d42b5922d05345add9ef
+     commit:      87f856c
+     body-sha256: 25b253c871cc9f32fa0032b4a646a5a4cc962cf4825df0fed9b19373394f00c9
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-09-08T10:17:57Z
+     generated:   2026-09-13T03:39:06Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve steps 1-5 against companion-rules above.
@@ -150,6 +150,21 @@ empty namespace reads `compliant: false` regardless of agent behavior; a session
 a populated namespace and then does nothing further reads `compliant: true`. Do not treat
 `compliant` alone as proof of §2c adherence in either direction — corroborate against the actual
 search/write calls the session made before citing it as evidence.
+
+### 2d. CERES DEFECT REPORTING — FILE THE ISSUE, THAT IS THE ALERT
+
+Any agent that hits a Ceres defect — a provenance/governance rejection it believes is
+wrong, a schema or tool error, a silent or dropped write, a broken install or update —
+must file a GitHub issue on `FinTechGlobalSolutions/sentinel-memory-os` with label
+`ceres-defect` **before** routing around it. The issue must name: the affected version
+(`ceres --version`), the exact error or rejection text, the tool/operation that
+triggered it, the reporting agent's name and Ceres session ID, reproduction steps, and
+whether a workaround was applied. Filing the issue IS the alert: the
+`com.sentinel.ceres-issue-watch` LaunchAgent polls the repo and dispatches each new open
+issue to a Devin CLI session for autonomous resolution. A defect reported only in chat,
+only to Ceres, or only to a vault note alerts no one. Never silently bypass a Ceres
+rejection — if a workaround is unavoidable, the issue must already exist and the
+workaround must be disclosed in it.
 
 ---
 
