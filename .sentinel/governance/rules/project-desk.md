@@ -170,3 +170,56 @@ Placement corrected 2026-08-31 (§3): the desk block lives in **`PROJECT_DESK.md
 - `worktrees/`, `quarantine-*`, `wt-charter-*` — transient.
 
 One desk, many projects, one prefix each. Never reuse a prefix across projects.
+
+## 7. Jira supersedes Desk for `quorumbooks` (D-246 · QB-289, Ruled 2026-09-13)
+
+This section was itself flagged as a gap: `quorumbooks-cockpit/CLAUDE.md` noted since
+2026-09-12 that this file was stale against D-246 and QB-289 (audit-and-flag convention),
+and no repo's canon — including `quorumbooks` itself, where the actual mechanism lives —
+told an agent how to act on it. Corrected here, in the one canonical place, per §0
+ANTI-SPRAWL.
+
+**Ratified state, live:**
+- **D-246** (2026-09-05, Jira issue QB-166): Jira (`quorumbooks.atlassian.net`, project
+  `QB`) ratified *above* Project Desk for the `quorumbooks` project specifically.
+- **QB-289** (Ruled 2026-09-13, JP live in chat — Ceres decision `490cc941…`): Jira
+  project `QB` is the system of record for epics/roadmap/decisions/compliance for
+  `quorumbooks`; new work originates as a QB issue — no key, no work. **Project Desk's
+  Agent Queue is a real, live work-pickup mechanism — not deprecated.** JP corrected an
+  interim design mid-cutover that would have treated it as redundant; Desk is a
+  narrower attention/queue surface layered on top of Jira now, not the planning system
+  of record. QB-289's own text calls for Desk to retire "after two clean GitHub↔Jira
+  reconciliation cycles," but **nothing currently counts those cycles** — no script, no
+  field, no owner. That clause is prose without a mechanism behind it; don't treat Desk
+  as already inert for `quorumbooks` on the strength of it alone.
+- **Scope: `quorumbooks` only.** `palladio` · `quorumbooks-web` · `quorumbooks-app` ·
+  `quorumbooks-cockpit` are **unaffected** — those four stay on Project Desk exactly as
+  described in §6 until each is separately migrated. Do not infer a broader cutover.
+
+**Mechanism (built 2026-09-13, `quorumbooks` PR #266) — this is the part no file
+answered before now:**
+- `quorumbooks/scripts/qbj` — the agent-side Jira REST client. `qbj show|list|claim|
+  transition|comment|return|done <KEY> ...` — see the script's own header for full usage.
+  Does not create issues (origination is a human/Jira-UI act, same as Desk's own
+  preferExistingIssue posture).
+- `quorumbooks/scripts/fluctus-wave-turnover.sh` — daily GitHub↔Jira reconciliation
+  (closes issues for merged QB-tagged PRs, flags drift). **Scheduled** — LaunchAgent
+  `com.quorumbooks.fluctus-wave-turnover`, 07:37; digest + macOS notification per run,
+  logs under `~/.local/state/sentinel/fluctus-wave-turnover/`.
+- `quorumbooks/scripts/qb-branch-guard.js` — pre-push gate 18/18, **advisory only**
+  (warns, never blocks) when a branch lacks a `QB-<number>` tag, during the transition.
+- **Credentials**: `QB_JIRA_API_TOKEN` + `QB_JIRA_EMAIL`, INF-28 Keychain convention
+  (`quorumbooks/packages/shared/src/keychain/credentialRegistry.ts`) — **provisioned**.
+  Never print a secret's value to check it exists — `security find-generic-password -a
+  <name> -s quorumbooks -w` prints the live value; use it only redirected/exit-code-
+  checked, never surfaced in a session transcript or log.
+- The Atlassian Rovo MCP connector (`quorumbooks.atlassian.net`, tools like
+  `searchJiraIssuesUsingJql`/`transitionJiraIssue`/`addCommentToJiraIssue`) is also
+  live and usable directly by a Claude session with that connector — `qbj` exists so
+  the same operations work from a plain shell (hooks, cron, non-Claude agents) too.
+
+**For an agent working in `quorumbooks`:** treat Jira project `QB` as the live record.
+Use `qbj` (or the Rovo MCP tools, if connected) to check/claim/close issues; a
+`atlier_project_scan {project:"quorumbooks"}` read is no longer sufficient on its own
+to certify desk truth for this repo — cross-check Jira. For the other four repos, §6
+still governs unchanged.
