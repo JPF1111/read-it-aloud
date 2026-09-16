@@ -394,6 +394,14 @@ means nothing is owed in either direction.
 
 ## Commits
 - Conventional Commits: `type(scope): summary` (≤72 char subject).
+- **Any repo change carries a version bump and a CHANGELOG entry in the same commit as the
+  work.** (Sanctioned by: JP, 2026-09-16 — moved verbatim from `~/CLAUDE.md`, where it had
+  lived outside the law tree; see the release tagging rule above for tagging each bump.)
+  **Scope — PROPOSED, awaiting JP:** binds repos with a version manifest (`package.json` /
+  `pyproject.toml` `version`). Repos without one record the change in their change ledger
+  instead (sentinel: `changes/CHANGELOG.md`). Generated `govsync`/`govland` mirror commits are
+  exempt. **Until JP rules, the sanctioned text above governs**; any change that can't meet it
+  (e.g. a repo with no version manifest) must disclose that in its PR and flag it to JP.
 - Body explains *why*, not *what*, when the change isn't self-evident.
 - No co-author trailers unless JP requests them.
 
