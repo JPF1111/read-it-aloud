@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      6ec1b73
-     body-sha256: c1b84fb0bfb7f17f8dc1a12b2f8b8841764670fbfe5ec8c5c8ccf58f33241081
+     commit:      ff4101f
+     body-sha256: 61ac5200fafe8a66889329734928d482628ece8392441d22df14a56eefd5f29e
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-09-17T02:01:44Z
+     generated:   2026-09-18T13:54:06Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve the rule files it routes to against companion-rules above.
@@ -55,6 +55,7 @@ real path + SHA-256 you read in the work's progress artifact:
 | write a path into anything · create a dir · assign a port | `canonical-paths.md` (`/gov-paths`) |
 | write D-###/C-###/registers · vault write · Ceres write · claim prior decisions | `vault-and-memory.md` (`/gov-memory`) |
 | read/write Project Desk or Jira · pick up queued work | `project-desk.md` (`/gov-trackers`); desk block lives in the repo's `PROJECT_DESK.md`, never `AGENTS.md` |
+| any AWS CLI/console/MCP action | `aws-agent-toolkit.md` — profile pinning, region caveat, secrets handling |
 | work in any repo | that repo's `CLAUDE.md` (repo canon; defers to this file) |
 
 In a repo listed in `~/dev/sentinel/governance/rules/gate-governed-repos.txt`, read **all** five required rule

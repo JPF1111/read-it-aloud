@@ -201,6 +201,7 @@ its REJECTED-then-adopted reasoning are left intact, not deleted.
 | web (Vite) | 5173 | — | `strictPort: true` — conflict FAILS LOUD, never relocates |
 | admin (Vite) | 5174 | — | `strictPort: true` |
 | api | 3001 | — | |
+| marketing site (quorumbooks-web, Astro) | 4321 | — | `strictPort: true` (qbw-11, 2026-09-17) — was previously unpinned/unrecorded, the one repo in the fleet without this discipline; 4321 is Astro's own existing default, pinned in `astro.config.mjs` + `vite.server.strictPort` |
 | cockpit | 5200 / 5201 | — | UI + paired API process |
 | postgres (EDB 18, D-085) | 5432 | — | canonical local Postgres; Docker Postgres is a non-default escape hatch only |
 | **Quorum Books — own derived-store stack (D-155, current, live-verified 2026-08-01, reverses D-146)** | | | |
