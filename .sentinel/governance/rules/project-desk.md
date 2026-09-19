@@ -94,13 +94,28 @@ rather than assert it against them.
 `governance/rules/custos-manifest.json` entry `project_desk_contract`
 (class `remote_contract`) pins three probes against the live page:
 
-| probe | pinned (2026-09-08) |
+| probe | pinned (2026-09-18) |
 |---|---|
-| contract version | `4.12.0` |
+| contract version | `4.13.0` |
 | PD protocol version | `12` |
 | block template sha256 | `4c34c892cf5d421a9e4ca3125df5e4abf08073fc6f44d0a2c517edf2af4a406f` |
 
-Re-pinned 2026-09-08 from `4.10.0` / `10` / `11b6549696…`. Reason: the vendor shipped 4.11
+Re-pinned 2026-09-18 from `4.12.0`. Reason: the vendor shipped 4.13.0 (custos flagged it
+2026-09-18). Only the version probe moved — protocol stays `12` and the block template hash
+is unchanged, so no repo's `PROJECT_DESK.md` needs regenerating. Diffed live against §3–§4:
+**no local delta is contradicted.** The host-owned-file prohibition ("Do not replace,
+overwrite, or follow a symlink through an existing `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`")
+is intact, so our symlink estate stays protected; the absolute-path rule is still scoped to
+their block ("never commit machine-specific absolute paths into agent instructions"), so
+§3's scope delta still stands; and **ask (a) still has not shipped** — the page carries no
+customer-authored instruction block, so §3's "still open" line remains accurate. Also present
+in the 4.13.0 page, no action required (whether it is new since 4.12.0 is UNVERIFIED — we keep
+no archived copy to diff against): a "Change surface" section stating the command layer is the
+only write surface for work (the desk is a truthful read of the substrate, no UI control
+mutates work), and a hash-vs-version promise — a template hash change means "re-run your
+generator", a protocol version change means "read what changed", never shipped silently.
+
+Previously re-pinned 2026-09-08 from `4.10.0` / `10` / `11b6549696…`. Reason: the vendor shipped 4.11
 and 4.12 (custos flagged the drift 2026-09-06). Diffed live against §3–§4 on 2026-09-08:
 **no local delta is contradicted.** New in 4.12.0, not yet reflected in §4: a separate
 **Return Queue** (`issueId + whyStopped`; only the current assignee may Return assigned

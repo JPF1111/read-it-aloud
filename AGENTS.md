@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      ff4101f
-     body-sha256: 61ac5200fafe8a66889329734928d482628ece8392441d22df14a56eefd5f29e
+     commit:      f565e0d
+     body-sha256: c615dbb73d0373b77105ce1cd1234c671579d570285efdc4b93bfe8e3b7f09eb
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-09-18T13:54:06Z
+     generated:   2026-09-19T01:20:23Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve the rule files it routes to against companion-rules above.
@@ -56,6 +56,7 @@ real path + SHA-256 you read in the work's progress artifact:
 | write D-###/C-###/registers · vault write · Ceres write · claim prior decisions | `vault-and-memory.md` (`/gov-memory`) |
 | read/write Project Desk or Jira · pick up queued work | `project-desk.md` (`/gov-trackers`); desk block lives in the repo's `PROJECT_DESK.md`, never `AGENTS.md` |
 | any AWS CLI/console/MCP action | `aws-agent-toolkit.md` — profile pinning, region caveat, secrets handling |
+| install/review a Claude Code skill · a skill invocation gets blocked | `skillspector-and-skill-gate.md` — approval ledger, `PreToolUse` gate, troubleshooting |
 | work in any repo | that repo's `CLAUDE.md` (repo canon; defers to this file) |
 
 In a repo listed in `~/dev/sentinel/governance/rules/gate-governed-repos.txt`, read **all** five required rule
