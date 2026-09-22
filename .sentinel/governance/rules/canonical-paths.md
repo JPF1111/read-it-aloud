@@ -109,8 +109,9 @@ Ruled on rather than left ambiguous:
   active use), like `vault` is exempt from the
   org `protect-main` ruleset. Its GitHub default branch is `SlugThugShell`, not `main` — a
   named working branch, not a stable trunk to generate law onto. Encoded as a name-based skip
-  in `bin/govsync`'s `EXEMPT_REPOS` array. If this repo ever gets a real default branch, lift
-  the exemption and let it be governed like its peers.
+  in `bin/gov-exempt-repos.sh`'s `EXEMPT_REPOS` array (sourced by `bin/govsync` and
+  `bin/govcheck`, and by `bin/govland` as of `CHG-2026-09-21-003`). If this repo ever gets a
+  real default branch, lift the exemption and let it be governed like its peers.
 
 - ⛔ **`~/dev/code/qb/quorumbooks-www`** — EXEMPT (**ruled 2026-09-07: JP delegated the call — "don't
   care" — and the proposing session applied it**). It is
@@ -121,7 +122,26 @@ Ruled on rather than left ambiguous:
   again on every future publish. Hostinger serves that tree, so a mirror there also risks
   publishing standing law and this file at `quorumbooks.com/AGENTS.md` (404 as of 2026-09-07
   16:50Z; whether it was served between 2026-08-26, when agent files were first committed there,
-  and 2026-09-07 is UNVERIFIED). Encoded as a name-based skip in `bin/govsync`'s `EXEMPT_REPOS`.
+  and 2026-09-07 is UNVERIFIED). Encoded as a name-based skip in `bin/gov-exempt-repos.sh`'s
+  `EXEMPT_REPOS` (sourced by both `bin/govsync` and `bin/govcheck`).
+
+- ⛔ **[`~/dev/code/everything-claude-code`](file:///Users/jpfinley/dev/code/everything-claude-code)**
+  — EXEMPT (**ruled 2026-09-21: JP directive "fix known issues, don't leave them" — delegated
+  disposition, applied after verification**). A vendored third-party clone, not repo-owned
+  content: `origin` = [`FinTechGlobalSolutions/everything-claude-code`](https://github.com/FinTechGlobalSolutions/everything-claude-code),
+  `upstream` = [`affaan-m/ECC`](https://github.com/affaan-m/ECC), `HEAD` =
+  [`c8b555a3`](https://github.com/FinTechGlobalSolutions/everything-claude-code/commit/c8b555a33c6e8a182d88c2df3804e8b876fc0a13)
+  ("chore: replace with current affaan-m/ECC (was a stale WorldFlowAI fork)",
+  [PR #3](https://github.com/FinTechGlobalSolutions/everything-claude-code/pull/3), 2026-09-18).
+  Its `AGENTS.md` (8805 bytes) is upstream content — `git diff upstream/main -- AGENTS.md` shows
+  only upstream's own post-import drift (version bump 2.2.1→2.2.2; upstream **added** the
+  `ecc:` agent-name prefix in
+  [commit `e404468a`](https://github.com/affaan-m/ECC/commit/e404468a629517b7bdc9188723f1aed8ea3a32b0)
+  after our import — nothing was removed locally), no local hand-editing — so `govsync`
+  correctly refused to overwrite it (`blocked: 1`, no
+  `GENERATED FILE` provenance header to match). Governing it would fork the mirror from the
+  upstream project it exists to track. Encoded as a name-based skip in `bin/gov-exempt-repos.sh`'s
+  `EXEMPT_REPOS`.
 
 ## Hard placement constraints (learned, non-negotiable)
 
