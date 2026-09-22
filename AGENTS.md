@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      f565e0d
-     body-sha256: c615dbb73d0373b77105ce1cd1234c671579d570285efdc4b93bfe8e3b7f09eb
+     commit:      382fee2
+     body-sha256: 8a5a47e0d70f26f47f085bfc3b9e26b1c3f5e55df47e834d19a8f488712dbbfa
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-09-19T01:20:23Z
+     generated:   2026-09-22T13:50:44Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve the rule files it routes to against companion-rules above.
@@ -83,12 +83,12 @@ second-order effects unasked. **Tell JP when a plan has a hole** — he prefers 
 ### 2a. CERES DOCUMENTATION VERSION AUTHORITY
 
 Ceres instructions/install/config/reference docs are authoritative only when verified for the
-installed version or in that version's build-validated docs manifest. Current label: **Ceres
-Sentinel Memory OS v0.5.1** (D-189; supersedes D-116). Missing/mismatched version metadata →
-**UNVERIFIED / NON-AUTHORITATIVE**: don't follow until validated against the installed runtime;
-don't call it wrong without evidence. Package metadata is the version source of truth; docs and
-artifacts derive from or are checked against it; the release gate **must fail** on disagreement.
-Agents may not waive it or silently repair only the generated output.
+installed version or in that version's build-validated docs manifest. Current label:
+**Ceres Sentinel Memory OS v0.5.1** (D-189; supersedes D-116). Missing/mismatched version
+metadata → **UNVERIFIED / NON-AUTHORITATIVE**: don't follow until validated against the
+installed runtime; don't call it wrong without evidence. Package metadata is the version
+source of truth; docs and artifacts derive from or are checked against it; the release gate
+**must fail** on disagreement. Agents may not waive it or silently repair only the generated output.
 
 ### 2b. CERES READ MANDATE — COMPLETE THE LOOP
 
@@ -268,3 +268,28 @@ Recon / search / inventory → cheapest capable (Claude: `scout`, haiku). Scoped
 settled design → mid tier (`builder`, sonnet). Design, governance, §5-adjacent calls, root cause,
 and review of every implementation diff before merge → strongest (`judge`, opus). Name the tier on
 every spawn; the cheap model builds, the strong model checks. Definitions: `~/dev/sentinel/governance/agents/`.
+
+### 9g. ACTIVE LINKS — EVERY REFERENCE OPENS
+
+Every report, file, directory, web page, PR, issue, commit, log, vault note, or Ceres
+error/refusal/defect/queue item you give JP or another agent, or write into any artifact — chat
+reply, PR/issue body, handoff, tracker, vault note, CHANGELOG entry, Ceres record, error report —
+is an **active link that opens the target**, not a name or a path to reconstruct:
+- Local files/directories → a markdown link to the absolute path; `file://` where markdown
+  doesn't render.
+- On GitHub (PR/issue body, comment, tracked doc) `file://` is stripped and an absolute path is
+  rebased onto github.com — both are dead. A tracked file → its
+  `https://github.com/<org>/<repo>/blob/<commit-sha>/<path>` URL (commit SHA, not branch: a branch
+  link dies when the branch is deleted); a repo-relative link also works inside that repo's own
+  tracked docs. An untracked file → its absolute path, marked "local only — not openable here".
+- Web, GitHub, Jira → the full `https://` URL.
+- Vault notes → a link to the note.
+- Ceres errors/refusals/defects → the §2d issue **and** the evidence file (e.g. the queue's
+  `.reason.json`); any other queue item → its queue file.
+
+A link that does not open is not compliance — probe it (§9e). Paths inside a fenced, pasteable
+command stay literal (§9); link the target in the prose beside it. Under `copypaste`, give the raw
+URL or absolute path (§9c). No bare paths and no bare IDs where a link is possible. If a target
+genuinely has no openable form, say so explicitly rather than leaving it bare. (Sanctioned by: JP,
+2026-09-21 — "MAKE THIS A STANDING LAW anything that a report, file reference, web page, etc is
+given or referenced that it is 100% an active link to open period. that includes ceres errors etc.")
