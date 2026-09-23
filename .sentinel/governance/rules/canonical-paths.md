@@ -12,6 +12,7 @@ other source is a defect: flag it.
 | Marketing site (Astro 5 + Tailwind v4) | `~/dev/code/qb/quorumbooks-web` |
 | App | `~/dev/code/qb/quorumbooks-app` |
 | Cockpit | `~/dev/code/qb/quorumbooks-cockpit` |
+| Wiki / docs site (Next.js 15 + TinaCMS) | `~/dev/code/qb-wiki` → `https://github.com/FinTechGlobalSolutions/qb-wiki` (private) |
 | Fleet-level canon | `~/dev/code/qb/CLAUDE.md` · `~/dev/code/qb/AGENTS.md` |
 | **Obsidian vault (LAW)** | `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Prosperity Springs` |
 | Campaign hub | `…/Prosperity Springs/CAMPAIGNS/ACTIVE/Quorum Books/` (corrected 2026-08-10, CENSOR W0 — live vault folder is "Quorum Books", not "HOA SaaS"; the old name is preserved in older decision-entry source citations as audit trail, per D-086) |
@@ -33,8 +34,18 @@ and got it wrong twice on 2026-08-31 before JP corrected it by hand.
 
 | Thing | Path |
 |---|---|
-| Documentation hub | `~/dev/code/mylo-documentation-hub` → `github.com/FinTechGlobalSolutions/mylo-documentation-hub` |
-| Legacy systems research | `~/dev/code/legacy-systems-research` → `github.com/FinTechGlobalSolutions/legacy-systems-research` |
+| Workspace (VS Code) | `~/dev/code/mylo/MYLO.code-workspace` |
+| Documentation hub | `~/dev/code/mylo/mylo-documentation-hub` → `github.com/FinTechGlobalSolutions/mylo-documentation-hub` |
+| Legacy systems research | `~/dev/code/mylo/legacy-systems-research` → `github.com/FinTechGlobalSolutions/legacy-systems-research` |
+
+**Relocated under `~/dev/code/mylo/` (corrected 2026-09-23, JP authorized live in chat).**
+Both repos and the workspace file live in that one directory; the earlier sibling locations
+(`~/dev/code/mylo-documentation-hub`, `~/dev/code/legacy-systems-research`) no longer exist
+on disk — verified 2026-09-23 — and are listed under DEAD PATHS below. The Ceres side of the
+same correction is a `codex-desktop` proposal (`MYLO canonical local path correction`, queue
+`472295e8-28f1-4174-badc-43ad87ef01a1`, proposal `c39b3a29-fba3-4a7b-87f0-bc8bfb3d92d1`,
+namespace `mylo`, target `ceres://mylo/project-spine`) that lands through owner ratification,
+not through this file.
 
 **`legacy-systems-research` IS a MYLO repo** despite the name — it is the clean-room
 research hub for legacy health plan platforms (QNXT and adjacent payer systems). Its
@@ -85,6 +96,9 @@ land changes through a PR anyway (git-workflow.md). Do not move them into the or
 - ❌ `~/Documents/DEV/Github/Sandbox/clearstory-ledger`
 - ❌ `quorum-marketing` / `quorumbooks-site` as *source* repos (`quorumbooks-web` is source;
   `quorumbooks-site` is the publish target only).
+- ❌ `~/dev/code/mylo-documentation-hub` and `~/dev/code/legacy-systems-research` — the MYLO
+  repos' former sibling locations; **moved under `~/dev/code/mylo/`** (JP-authorized, corrected
+  2026-09-23). See the MYLO Health Systems table above for the live paths.
 
 ## Governance coverage — repos ruled on individually (JP, 2026-08-31)
 
@@ -126,8 +140,12 @@ Ruled on rather than left ambiguous:
   `EXEMPT_REPOS` (sourced by both `bin/govsync` and `bin/govcheck`).
 
 - ⛔ **[`~/dev/code/everything-claude-code`](file:///Users/jpfinley/dev/code/everything-claude-code)**
-  — EXEMPT (**ruled 2026-09-21: JP directive "fix known issues, don't leave them" — delegated
-  disposition, applied after verification**). A vendored third-party clone, not repo-owned
+  — EXEMPT (**ruled 2026-09-21: JP approved** — approved explicitly at 2026-09-21T13:28Z via the
+  [Specula tracker board](https://claude.ai/artifact/2Wi2ufnbFwj4uUdjjxRjQP) (private artifact),
+  relayed by the orchestrator. The ruling itself is recorded in Ceres as memory
+  `cd258dfa-2b8c-43b7-aac0-598c7eeb9be4` (namespace `sentinel`), which names the board's own
+  action record and comment thread; read that rather than the relay. Original directive: "fix
+  known issues, don't leave them", applied after verification). A vendored third-party clone, not repo-owned
   content: `origin` = [`FinTechGlobalSolutions/everything-claude-code`](https://github.com/FinTechGlobalSolutions/everything-claude-code),
   `upstream` = [`affaan-m/ECC`](https://github.com/affaan-m/ECC), `HEAD` =
   [`c8b555a3`](https://github.com/FinTechGlobalSolutions/everything-claude-code/commit/c8b555a33c6e8a182d88c2df3804e8b876fc0a13)

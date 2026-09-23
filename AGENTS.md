@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      382fee2
-     body-sha256: 8a5a47e0d70f26f47f085bfc3b9e26b1c3f5e55df47e834d19a8f488712dbbfa
+     commit:      709f85d
+     body-sha256: 5b2af5e616550519a38f31ef02222353917a00b457418682e67b67b6205e92fe
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-09-22T13:50:44Z
+     generated:   2026-09-23T19:16:59Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve the rule files it routes to against companion-rules above.
@@ -287,8 +287,14 @@ is an **active link that opens the target**, not a name or a path to reconstruct
 - Ceres errors/refusals/defects → the §2d issue **and** the evidence file (e.g. the queue's
   `.reason.json`); any other queue item → its queue file.
 
-A link that does not open is not compliance — probe it (§9e). Paths inside a fenced, pasteable
-command stay literal (§9); link the target in the prose beside it. Under `copypaste`, give the raw
+**Scope.** This binds what a person reads: chat replies, reports, PR and issue bodies and
+comments, commit messages, handoffs, trackers, vault notes, CHANGELOG entries, Ceres records
+and error reports. Text a program parses stays literal — code, config and manifest values (a
+`path:` field, a hash, a glob), machine-read trailers, and the paths inside a fenced,
+pasteable command. Where such a value appears in something a person reads, the surrounding
+prose carries the link. (Scope ruled by JP, 2026-09-23.)
+
+A link that does not open is not compliance — probe it (§9e). Under `copypaste`, give the raw
 URL or absolute path (§9c). No bare paths and no bare IDs where a link is possible. If a target
 genuinely has no openable form, say so explicitly rather than leaving it bare. (Sanctioned by: JP,
 2026-09-21 — "MAKE THIS A STANDING LAW anything that a report, file reference, web page, etc is
