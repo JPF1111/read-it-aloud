@@ -13,6 +13,7 @@ other source is a defect: flag it.
 | App | `~/dev/code/qb/quorumbooks-app` |
 | Cockpit | `~/dev/code/qb/quorumbooks-cockpit` |
 | Wiki / docs site (Next.js 15 + TinaCMS) | `~/dev/code/qb-wiki` → `https://github.com/FinTechGlobalSolutions/qb-wiki` (private) |
+| **Palladio (design/source library — Books I-VII + Codex, the complete system definition)** | `~/dev/code/qb/Palladio` → `github.com/FinTechGlobalSolutions/palladio` (recorded 2026-09-27 — no entry existed, agents were guessing at the path; verified as a clean checkout on `main`) |
 | Fleet-level canon | `~/dev/code/qb/CLAUDE.md` · `~/dev/code/qb/AGENTS.md` |
 | **Obsidian vault (LAW)** | `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Prosperity Springs` |
 | Campaign hub | `…/Prosperity Springs/CAMPAIGNS/ACTIVE/Quorum Books/` (corrected 2026-08-10, CENSOR W0 — live vault folder is "Quorum Books", not "HOA SaaS"; the old name is preserved in older decision-entry source citations as audit trail, per D-086) |
@@ -78,6 +79,17 @@ touching them (`gh auth switch -u JPF1111`, and for git pushes run with the gh c
 helper: `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='!gh auth
 git-credential'`), then switch back to `QuorumBooks`. Neither JPF1111 repo carries a ruleset;
 land changes through a PR anyway (git-workflow.md). Do not move them into the org.
+
+## Vulcan — org-wide shared CI infrastructure (recorded 2026-09-27)
+
+Not a venture — central reusable GitHub Actions workflows (`claude.yml`, `claude-review.yml`)
+that other `FinTechGlobalSolutions` repos call via `workflow_call` instead of duplicating Claude
+Code CI logic. No entry existed here, so recorded alongside the venture tables rather than left
+to be guessed at.
+
+| Thing | Path |
+|---|---|
+| Vulcan (reusable workflows) | `~/dev/code/Vulcan` → `github.com/FinTechGlobalSolutions/Vulcan` (verified 2026-09-27 as a clean checkout on `main`) |
 
 ## DEAD PATHS — never write, never reference, never recreate
 
