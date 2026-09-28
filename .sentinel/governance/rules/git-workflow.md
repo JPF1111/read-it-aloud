@@ -191,8 +191,13 @@ pattern.
    `worktree-lock.sh release --worktree <path>` in the same breath.
 4. **Override only by attributed takeover.** If a lock's session is genuinely dead
    (crashed, archived) run
-   `worktree-lock.sh takeover --slug <slug> --owner <name> --reason "..."` — it appends a
-   named, reasoned ledger entry. There is deliberately no `--force` and the hook honors no
+   `worktree-lock.sh takeover --slug <slug> --session-id <your-session-id> --owner <name> --reason "..."`
+   — it appends a named, reasoned ledger entry. `--session-id` is what makes the guard
+   recognise the new owner (the guard's block message prints the blocked session's id in
+   its suggested command). Omit it only when the takeover is immediately followed by
+   `release` (orphan sweep): a session-less takeover records an ownerless lock that the
+   guard enforces against **every** session, the taker included, and that `claim` cannot
+   repair. There is deliberately no `--force` and the hook honors no
    bypass token: deleting or editing a lock file to get past the guard is the exact
    theater AGENTS.md §5 condemns, and the daily report flags it as tampering.
 
@@ -400,9 +405,14 @@ means nothing is owed in either direction.
   **Repos without a version manifest get one** (Ruled by JP, 2026-09-16: "add a version").
   Implementation (agent's choice, not part of the ruling): a root `VERSION` file holding a semver
   string, bumped with every change like any other manifest (sentinel: `VERSION`, ledger
-  `changes/CHANGELOG.md`). **Still PROPOSED — awaiting JP:** generated `govsync`/`govland` mirror
-  commits are exempt. Until JP rules on that, the sanctioned text above governs them too; a sync
-  PR that can't meet it discloses that and flags it to JP.
+  `changes/CHANGELOG.md`). **Ruled by JP, 2026-09-24:** "exempt from making the repos do a
+  version change but not the actual gov file. it must be versioned and it should also be
+  documented in its changelog what the changes were" — generated `govsync`/`govland` mirror
+  commits landed in *consuming* repos are exempt from this rule: they do not need to bump
+  that repo's own version manifest or CHANGELOG. The exemption runs the other way for the
+  governance source itself — any change to sentinel's own governance content (`governance/`)
+  still bumps sentinel's `VERSION` and gets a `changes/CHANGELOG.md` entry describing what
+  changed, in the same commit as the change, same as any other repo change under this rule.
 - Body explains *why*, not *what*, when the change isn't self-evident.
 - No co-author trailers unless JP requests them.
 

@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      709f85d
-     body-sha256: 5b2af5e616550519a38f31ef02222353917a00b457418682e67b67b6205e92fe
+     commit:      efa21dd
+     body-sha256: aac5be9245e6cb48be65466feaa872740973f2b94af4a8ac52e1e1edcf8b18a6
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-09-23T19:16:59Z
+     generated:   2026-09-28T22:07:23Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve the rule files it routes to against companion-rules above.
@@ -268,6 +268,25 @@ Recon / search / inventory → cheapest capable (Claude: `scout`, haiku). Scoped
 settled design → mid tier (`builder`, sonnet). Design, governance, §5-adjacent calls, root cause,
 and review of every implementation diff before merge → strongest (`judge`, opus). Name the tier on
 every spawn; the cheap model builds, the strong model checks. Definitions: `~/dev/sentinel/governance/agents/`.
+`judge`/`scout` block Edit/Write/NotebookEdit/Agent/EnterWorktree/ExitWorktree/Skill/
+Artifact outright, and deny GitKraken and Desktop Commander whole (each carries a
+commit/push/write/shell-shaped tool; per-tool MCP denial isn't supported, so a server
+mixing read and write tools is denied wholesale — Ceres stays reachable, required by
+§2b). A per-subagent `PreToolUse` hook (`bin/hook-agent-readonly-guard.sh`) blocks bare
+Bash-based git/gh state mutation and destructive file ops, including bare `sudo`/`env`/
+`bash -c`/`eval`/subshell forms. **State this plainly, not as mechanical enforcement it
+isn't:** this is a speed bump against a *cooperative* subagent's accidental overstep —
+the 2026-09-16 incident it exists for — not a security boundary against deliberate
+evasion. Three adversarial review rounds each found a new bypass by treating it as one
+(`git -c alias.ci=commit ci`; a quoted `;` shredding the parse; `git checkout .`
+silently destroying tracked files while "allowed"); the third's own diagnosis —
+"enumerating more verbs will not converge" — is why `classify_git`/`classify_gh` now
+default to block for anything not on an explicit read-only allow-list, rather than
+default to allow for anything not on a block-list. Stacked or flag-bearing wrapper
+forms, shell control-flow (`for`/`if`/`while`), variable indirection, and command
+substitution are NOT covered and never will be by a static classifier — don't reach for
+this hook as protection against those; a reviewer that finds a fix reports it, it does
+not commit, write, or ship it, by instruction, full stop.
 
 ### 9g. ACTIVE LINKS — EVERY REFERENCE OPENS
 
@@ -292,7 +311,9 @@ comments, commit messages, handoffs, trackers, vault notes, CHANGELOG entries, C
 and error reports. Text a program parses stays literal — code, config and manifest values (a
 `path:` field, a hash, a glob), machine-read trailers, and the paths inside a fenced,
 pasteable command. Where such a value appears in something a person reads, the surrounding
-prose carries the link. (Scope ruled by JP, 2026-09-23.)
+prose carries the link. This file's own `~/dev/sentinel/...` paths stay bare: they are typed
+as often as read, and a root file mirrored across the fleet has no link form that survives on
+GitHub. (Scope ruled by JP, 2026-09-23; this file's own paths, JP, 2026-09-24.)
 
 A link that does not open is not compliance — probe it (§9e). Under `copypaste`, give the raw
 URL or absolute path (§9c). No bare paths and no bare IDs where a link is possible. If a target
