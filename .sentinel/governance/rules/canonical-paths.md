@@ -139,6 +139,26 @@ Ruled on rather than left ambiguous:
   `bin/govcheck`, and by `bin/govland` as of `CHG-2026-09-21-003`). If this repo ever gets a
   real default branch, lift the exemption and let it be governed like its peers.
 
+- ⛔ **`~/dev/code/YABA`** — EXEMPT (**ruled 2026-09-28: JP — "exempt YABA"**). A clone of
+  `github.com/Subfly/YABA`, someone else's project; GitHub answered 403 to the push, so nothing
+  reached that repo (no PR, branch or marker ref of ours exists there — checked). Before the
+  exemption `govsync` had written into the working tree: it prepended `@AGENTS.md` to the tracked
+  `CLAUDE.md` and created generated files. The checkout was restored on 2026-09-28 (`CLAUDE.md`
+  checked out from git, generated files removed). Named in `EXEMPT_REPOS`
+  (`bin/gov-exempt-repos.sh`) and also caught by the rule below.
+
+- ⛔ **Any repo whose remote is not JP's** — EXEMPT BY RULE, no name needed (**ruled 2026-09-28: JP —
+  "NEVER push to any repo which I do not own"**; `git-workflow.md`, Push / PR). Owned accounts are
+  the list in `bin/gov-owned-accounts.txt`; `govsync`, `govcheck` and `govland` all ask
+  `gov_exemption()` in `bin/gov-exempt-repos.sh`, so a repo that is not JP's is not written into,
+  landed into or reported as drift (`govcheck` prints `exempt`). On disk on 2026-09-28:
+  `~/dev/code/headroom` (`headroomlabs-ai/headroom`) and `~/dev/code/ruflo` (`ruvnet/ruflo`), plus
+  YABA above. `headroom` had the same damage as YABA — its tracked `.github/copilot-instructions.md`
+  (upstream's own Copilot review policy) had been replaced by a symlink — and was restored the same
+  day. `ruflo` was never written to: `govsync` refused its hand-authored `AGENTS.md`. `QuorumBooks`
+  is on the owned list as the automation account whose credentials live in JP's keyring
+  (`jpfinley-site` is under it); JP can strike it.
+
 - ⛔ **`~/dev/code/qb/quorumbooks-www`** — EXEMPT (**ruled 2026-09-07: JP delegated the call — "don't
   care" — and the proposing session applied it**). It is
   the rendered publish target of `quorumbooks-web` (project-desk.md §6: never edited directly), and
