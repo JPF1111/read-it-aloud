@@ -462,6 +462,32 @@ means nothing is owed in either direction.
   - Still escalate real irreversibility regardless of session type — see below.
 - **Still escalate to JP (real irreversibility, not ceremony):** history rewrite, force-push
   to `main`, branch/tag deletion, secret rotation, anything touching production data or DNS.
+- **Never push to a repo JP does not own. (Ruled by JP, 2026-09-28: "NEVER push to any repo which I
+  do not own.")** Owned means a remote on one of the GitHub accounts in
+  `bin/gov-owned-accounts.txt` (`FinTechGlobalSolutions`, `JPF1111`, `QuorumBooks`), and every push URL
+  of the remote must be on one. Anything else — another person's project, another host, an SSH alias, a
+  remote that cannot be read — is read-only: fetch, never push, never open a PR, never write generated
+  files into it. A repo with no remote is JP's and is landed locally; a repo with remotes but no
+  `origin` is judged by all of them. This binds every agent and every script, whoever asked and
+  whatever the task, and none of the push-authority, auto-merge or clean-state rules above relaxes it.
+  Enforced in code, not only here: `bin/govsync`, `bin/govcheck` and `bin/govland` skip such a repo and
+  write nothing into it (`govland` also refuses to push to one as a last line of defence);
+  `bin/worktree-lock.sh` pushes no marker ref to it; and `bin/hook-push-owner-guard.py` blocks a
+  `git push` typed in a Claude Code Bash call, through newlines, `&&`/`;`/`|` chains, `cd`, `git -C`,
+  wrappers (`time`, `timeout`, `sudo`, `env`, `xargs`…), `bash -c`, `eval`, `$( )`, named remotes,
+  explicit URLs and every push URL of a remote, and refuses a push that retargets itself (`GIT_DIR`,
+  `--git-dir`, `-c remote.*`). **Where the hook runs:** `bin/hook-push-guard.sh`, which calls it, is
+  registered per project (sentinel, memory-os-installer, quorumbooks, Palladio, quorumbooks-cockpit,
+  quorumbooks-www and a number of worktrees), not in `~/.claude/settings.json`. A session opened in a
+  clone of someone else's project — `headroom`, `YABA`, `ruflo` — is therefore NOT covered by the hook
+  unless JP registers `bin/hook-push-owner-guard.sh` machine-wide; until then, in those repos, the rule
+  binds by this text alone. **Other stated limits:** the hook does not see a push inside a script,
+  alias or shell function, or from another vendor's tool, and it fails open (with a warning) when it
+  cannot tell which repo a push is in; a `gh pr create` or `gh api` write against a foreign repo is
+  blocked only because it needs a pushed branch first. Why it exists: on 2026-09-28 a sync wrote
+  generated law into clones of `Subfly/YABA` and `headroomlabs-ai/headroom` (replacing a tracked
+  upstream file in one, prepending a line to another) and `govland` tried to push to YABA; GitHub's 403
+  was the only thing that stopped it.
 - Open PRs with a clear title, summary, test evidence, and risk note.
 - **PR is now mandatory on `main`, mechanically (ratified 2026-08-16).** GitHub enforces
   this via an org-level ruleset (`protect-main`, `orgs/<org>/rulesets`), not just the
