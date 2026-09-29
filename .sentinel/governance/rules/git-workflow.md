@@ -217,6 +217,58 @@ pattern.
   bypassed deletion), **UNREGISTERED** (tree with no claim), and **LEDGER-MISMATCH** (lock
   file deleted/edited out-of-band). Report: `logs/worktree-locks/report-<date>.md`.
 
+**Cross-machine marker, and the one push that skips the pre-push hook (CHG-2026-09-28-009).
+Sanctioned by: JP, 2026-09-29 — live in chat: "approve 83", after the bypass was put to him
+in plain terms (it is confined to `refs/wip-locks/<branch>`, the marker carries no file of the
+project, no hook is edited or disabled, and no other push is affected).**
+- The registry above is local to one machine. `claim` therefore also pushes a marker ref,
+  `refs/wip-locks/<branch>`, to the worktree's `origin`; `release` deletes it; a claim is refused
+  when origin already has that ref. No marker goes to a remote JP does not own (Push / PR below).
+- **The marker is an empty commit: empty tree, no parent.** It carries no file of the branch. Until
+  2026-09-28 the tool pushed `HEAD` there, that is the branch's own commits, while its header called
+  the ref "content-free".
+- **`worktree-lock.sh` pushes and deletes that one ref with `git push --no-verify`. The repository's
+  pre-push hook does not run for it.** This is a bypass and is written down as one. It covers the
+  tool's two commands and nothing else: every other push, by any agent or script, runs the hook, and
+  `--no-verify` on those stays what each hook's own header says it is — an emergency bypass, never a
+  habit. The hook is not edited, disabled or reconfigured.
+- **Why:** a pre-push hook gates code leaving the machine; the marker moves no code. quorumbooks'
+  hook runs 20 gates and takes longer than the tool waits, and in a fresh worktree (dependencies not
+  installed) it cannot pass at all — and "claim on create" means a fresh worktree. On 2026-09-28 two
+  claims there died with an uncaught `subprocess.TimeoutExpired` and recorded nothing; the same
+  failure is on record for `release` on 2026-09-02.
+- **A machine knows its own marker.** `logs/worktree-locks/marker-<slug>.json` records the SHA of
+  the marker this machine pushed. `claim` adopts, and `release` deletes, only a ref that still
+  points at that SHA. The record holds one entry per branch the worktree has claimed; an entry is
+  written just before the push and removed only when that marker is known to be gone; `release`
+  removes every marker on record for the worktree. A marker with no entry is deleted by name in
+  one case only: it points at a commit of this repository that has files in it, which is what
+  the tool pushed (the branch `HEAD`) before 2026-09-28. Nothing else is touched
+  (CHG-2026-09-29-003).
+- **A claim is all or nothing.** Order: marker, Ceres record, local registry. If a later step fails
+  the marker is taken back; if it cannot be taken back, re-running the same claim adopts it.
+  `release` and `takeover` change nothing, locally or on origin, unless the Ceres record was
+  accepted: `release` deletes the marker last. Waits are bounded: `WORKTREE_LOCK_GIT_TIMEOUT` and
+  `WORKTREE_LOCK_CERES_TIMEOUT` (seconds per call, default 30), `WORKTREE_LOCK_TOTAL_TIMEOUT`
+  (seconds for the whole run, default 90).
+- **Limits:** a marker push typed by hand runs the hook like any other push. A `release` whose
+  delete fails still releases locally and leaves a stale marker: the next claim of that worktree
+  from the same machine adopts it, every other claim of that branch name is refused until it is
+  removed; running the same release again retries. A lock claimed before 2026-09-28 has nothing
+  on record, and a re-claim by its owner is refused by its own marker until the lock is released
+  and claimed again. The deletion by name applies to any lock with nothing on record for its
+  branch, and it cannot tell whose old-style marker it is: one pushed by another machine that
+  still runs the tool as it was before 2026-09-28 is deleted too, when its commit is in this
+  repository. An old-style marker whose commit is no longer in this repository, and a marker
+  whose record was lost, are left on origin. No marker is used when `origin` does not fetch from
+  and push to one and the same repository; a claim or release made in that state leaves the
+  record as it is. The check that a marker is this machine's and its deletion are two calls, not
+  one. A release made after `git worktree remove` reaches origin through the repository named
+  in the record; a lock with nothing on record, or whose record was written before
+  CHG-2026-09-29-003 and names no repository, cannot: release before removing the worktree. The
+  record is kept per worktree name: two worktrees of the same name in different repositories
+  share one.
+
 **Honest limits, stated so no one mistakes this for a wall:** the hook binds Claude Code
 sessions only — Codex, Aider, or a bare shell are bound *normatively* by this rule and
 caught only by the daily report after the fact. A lock is a tripwire plus an audit trail,
@@ -476,18 +528,23 @@ means nothing is owed in either direction.
   `git push` typed in a Claude Code Bash call, through newlines, `&&`/`;`/`|` chains, `cd`, `git -C`,
   wrappers (`time`, `timeout`, `sudo`, `env`, `xargs`…), `bash -c`, `eval`, `$( )`, named remotes,
   explicit URLs and every push URL of a remote, and refuses a push that retargets itself (`GIT_DIR`,
-  `--git-dir`, `-c remote.*`). **Where the hook runs:** `bin/hook-push-guard.sh`, which calls it, is
-  registered per project (sentinel, memory-os-installer, quorumbooks, Palladio, quorumbooks-cockpit,
-  quorumbooks-www and a number of worktrees), not in `~/.claude/settings.json`. A session opened in a
-  clone of someone else's project — `headroom`, `YABA`, `ruflo` — is therefore NOT covered by the hook
-  unless JP registers `bin/hook-push-owner-guard.sh` machine-wide; until then, in those repos, the rule
-  binds by this text alone. **Other stated limits:** the hook does not see a push inside a script,
-  alias or shell function, or from another vendor's tool, and it fails open (with a warning) when it
-  cannot tell which repo a push is in; a `gh pr create` or `gh api` write against a foreign repo is
-  blocked only because it needs a pushed branch first. Why it exists: on 2026-09-28 a sync wrote
-  generated law into clones of `Subfly/YABA` and `headroomlabs-ai/headroom` (replacing a tracked
-  upstream file in one, prepending a line to another) and `govland` tried to push to YABA; GitHub's 403
-  was the only thing that stopped it.
+  `--git-dir`, `-c remote.*`). **Where the hook runs:**
+  `bin/hook-push-owner-guard.sh` (the ownership check alone) is registered in
+  `~/.claude/settings.json` (JP, 2026-09-28), so it binds every Claude Code session on this machine,
+  including one opened in a clone of someone else's project — `headroom`, `YABA`, `ruflo`.
+  `bin/hook-push-guard.sh`, which runs the same check plus the force-push ban and the origin/main
+  token, is registered per project (sentinel, memory-os-installer, quorumbooks, Palladio,
+  quorumbooks-cockpit, quorumbooks-www and a number of worktrees). Both read the command with
+  `bin/gitpush.py`, so text that merely mentions a push (a commit message, an echo, a heredoc, a
+  `git+ssh://` URL) is not a push. **Other stated limits:** the hooks do not see a push inside a
+  script, alias, shell function or `make`-style runner, or from another vendor's tool. When the
+  ownership guard cannot tell which repo a push runs in (an unresolved `$VAR` in a `cd`) or cannot
+  parse the command, it allows that push with a warning; the force-push ban and the origin/main rule
+  do not depend on the repo and still apply (to an unparseable command by its text). A `gh pr create`
+  or `gh api` write against a foreign repo is blocked only because it needs a pushed branch first.
+  Why it exists: on 2026-09-28 a sync wrote generated law into clones of `Subfly/YABA` and
+  `headroomlabs-ai/headroom` (replacing a tracked upstream file in one, prepending a line to another)
+  and `govland` tried to push to YABA; GitHub's 403 was the only thing that stopped it.
 - Open PRs with a clear title, summary, test evidence, and risk note.
 - **PR is now mandatory on `main`, mechanically (ratified 2026-08-16).** GitHub enforces
   this via an org-level ruleset (`protect-main`, `orgs/<org>/rulesets`), not just the
