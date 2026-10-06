@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      680c1a1
+     commit:      3e2ebba
      body-sha256: aac5be9245e6cb48be65466feaa872740973f2b94af4a8ac52e1e1edcf8b18a6
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-09-29T14:05:56Z
+     generated:   2026-10-06T14:00:59Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve the rule files it routes to against companion-rules above.
