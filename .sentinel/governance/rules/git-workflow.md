@@ -366,6 +366,66 @@ a real schema error: `PullRequestReviewThread` has no `url` field), override iss
 → re-block cycle, and a real `hashlib` import bug caught by the guard's own fail-open path
 during testing (proving fail-open works, then fixed so the real check runs).
 
+## Session ledger — SOW, naming, audit close-out (ratified 2026-10-05)
+
+**Sanctioned by: JP, 2026-10-05, live in chat** — "any work that is not apart of the sessions
+original SOW needs to be created in an entirely new session so that it can be tracked and taken
+through completion", "a single command that will have claude perform a full audit of its chat
+history and report back everything which it accomplished and things that are still open from
+that session not others", "every chat sessions name changed to a unique name … a uniform naming
+structure", the record kept in Obsidian because "jira isnt gonna be around for ever"; then "go".
+Full operator documentation: `docs/session-ledger.md`. Engine: `bin/session-ledger.py`.
+
+1. **Every substantive session has a statement of work (SOW).** At the start of the session (or
+   the moment the ledger hook reports none) the session runs `/sow`, which records the SOW,
+   2–6 probe-checkable acceptance items and the out-of-scope list in a ledger file keyed by the
+   Claude session id (`~/dev/closeouts/ledger/<session-id>.md`, `canonical-paths.md`).
+2. **Work outside the SOW is spun off, never done inline.** The session hands it to a new
+   session (Desktop: `spawn_task`, whose prompt starts with `/sow …` so the child opens its own
+   ledger; elsewhere: a named session JP starts) and records the hand-off with
+   `session-ledger.py spin`. Answering a quick question is not work. Changing the SOW itself
+   needs JP's explicit say-so (`init --force`).
+3. **Uniform session names: `<client>-<YYYYMMDD>-<topic-slug>`.** Client codes:
+
+   | code | client |
+   |---|---|
+   | `cc` | Claude Code — desktop app Code tab (also the IDE extensions) |
+   | `term` | Claude Code — terminal CLI (`claude -n <name>` sets it at start) |
+   | `cloud` | Claude Code on the web / cloud sessions |
+   | `routine` | scheduled routines and SDK-driven runs |
+   | `dispatch` | Dispatch sessions |
+   | `c` | claude.ai chat |
+   | `work` | Cowork |
+   | `codex` | OpenAI Codex |
+
+   `/sow` renames the session itself where the client allows it (Desktop:
+   `set_session_title self`); elsewhere the session tells JP the name to set. This is separate
+   from, and does not change, the worktree `<AGENT-CODE><MMDDYY>-` convention above.
+4. **`/closeout` is the one audit command, runnable any time, scoped to this session only.** It
+   inventories the session's own transcript (`session-ledger.py audit` — every request including
+   mid-turn messages and anything compaction hid, files written, commit/PR commands, spin-offs),
+   classifies each request DONE / OPEN / SPUN-OFF / DROPPED with a probe run at close time
+   (§9e), writes the close-out note to the vault folder `Session Closeouts/` (append-or-replace
+   one named file, through `vault-guard.sh`), closes the ledger, and records the Ceres receipt.
+   Every OPEN item is offered as a spun-off session — never left only in chat. It is
+   non-terminal. `/closeout archive` runs it and then the archival report below.
+5. **Safety net.** Hooks wired machine-wide from `governance/claude/session-ledger-hooks.json`
+   by `bin/install-claude-surfaces.sh`: `UserPromptSubmit` re-injects the SOW and the scope rule
+   every turn (or nudges once when no ledger exists); `PreCompact` logs a snapshot; `SessionStart`
+   after compaction/resume re-injects it; `SessionEnd` marks an open ledger `unclosed` (and a
+   `closed` one too when requests arrived after its close-out) and writes an `unclosed` stub for a
+   ledger-less session of 3+ requests; `/sow` replaces such a stub.
+   `session-ledger.py list --status unclosed` is the backlog of sessions that never closed.
+6. **The vault note is the record, not the tracker.** Jira, Project Desk and Ceres records may
+   point at it; none replaces it.
+
+**Honest limits.** The hooks bind Claude Code only; Codex, claude.ai and Cowork follow this rule
+normatively and are named by hand. The scope reminder is advisory text — the model judges what
+is in scope; nothing blocks an off-SOW edit mechanically. Whether `SessionEnd` fires when a
+Desktop session is archived (rather than its process exiting) is UNVERIFIED — the `unclosed`
+list may miss such sessions until they are resumed. The audit lists what was attempted; only
+the close-time probes establish what landed.
+
 ## Session close-out — mandatory metrics report (canonical, ratified 2026-07-30)
 
 **Trigger — archival only.** This report is NOT part of routine close-out or a session going
@@ -374,7 +434,9 @@ that means the session is being **abandoned and archived**: no further messages,
 again. When that command is given, the Session Metrics Report is the session's **final act**
 before it goes dark. A session that is merely paused, waiting, or between slices does NOT
 produce this report — only the one being retired. The Strategist requests it as the last
-thing asked of that session; the session answers, and is then abandoned.
+thing asked of that session; the session answers, and is then abandoned. The non-terminal audit
+close-out (`/closeout`, § Session ledger above) is separate and may run at any time;
+`/closeout archive` runs it first, then this report.
 
 Non-negotiable rule for every number in it: label each as **VERIFIED** (checked against
 git/disk at report time) or **ESTIMATED** (reconstructed from conversation, could be off).

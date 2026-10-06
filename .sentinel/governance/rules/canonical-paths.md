@@ -91,6 +91,19 @@ to be guessed at.
 |---|---|
 | Vulcan (reusable workflows) | `~/dev/code/Vulcan` → `github.com/FinTechGlobalSolutions/Vulcan` (verified 2026-09-27 as a clean checkout on `main`) |
 
+## Session ledger (all ventures — recorded 2026-10-05, git-workflow.md "Session ledger")
+
+| Thing | Path |
+|---|---|
+| Ledger files (one per Claude session, working state) | `~/dev/closeouts/ledger/<session-id>.md` (override: `SESSION_LEDGER_DIR`) |
+| Close-out notes (the record) | `…/Prosperity Springs/Session Closeouts/<YYYY-MM-DD> — <session name>.md` |
+| Engine | `~/dev/sentinel/bin/session-ledger.py` |
+| Hook wiring source | `~/dev/sentinel/governance/claude/session-ledger-hooks.json` → merged into `~/.claude/settings.json` by `bin/install-claude-surfaces.sh` |
+| Skills | `~/dev/sentinel/governance/skills/{sow,closeout}` → linked into `~/.claude/skills/` |
+
+Earlier `Session Statistics Closeout — …` notes stay at the vault root as audit trail (D-086);
+new close-outs go to `Session Closeouts/`.
+
 ## DEAD PATHS — never write, never reference, never recreate
 
 - ❌ `~/Documents/DEV/` — **entire tree deleted 2026-07-13.** Any reference is a defect.
@@ -192,6 +205,36 @@ Ruled on rather than left ambiguous:
   `GENERATED FILE` provenance header to match). Governing it would fork the mirror from the
   upstream project it exists to track. Encoded as a name-based skip in `bin/gov-exempt-repos.sh`'s
   `EXEMPT_REPOS`.
+
+- ⛔ **Any repo with an `upstream` remote** — EXEMPT BY RULE, no name needed (**ruled 2026-10-04: JP — "any repo
+  thats not owned by fintechglobalsolutions or repos which were cloned from other sources. I just dont want my
+  files merged into repos which i do not own"**; he confirmed the three owned accounts stay). A clone of someone
+  else's project can sit under JP's own org and GitHub does not flag it as a fork (`everything-claude-code`,
+  `NGM6Update`); the `upstream` remote that tracking it needs is the only mechanical marker. `gov_exemption()`
+  in `bin/gov-exempt-repos.sh` checks it for `govsync`, `govcheck` and `govland` alike. A clone without an
+  `upstream` remote still needs a named entry below.
+
+- ⛔ **`~/dev/code/jpfinley-site`** — EXEMPT (**ruled 2026-10-04: JP, live in chat — "the jpfinley.com should
+  be ignored"**). JP's personal site, `origin` = `QuorumBooks/jpfinley-site` (an owned account, so the
+  not-JP's-repo rule above does not catch it; this named entry does). No governance mirror is written,
+  landed or reported as drift. Encoded as a name-based skip in `bin/gov-exempt-repos.sh`'s `EXEMPT_REPOS`
+  (`CHG-2026-10-04-001`). JP first meant `1111-parallels-site` (next entry) and confirmed this one is also
+  fine to exempt.
+
+- ⛔ **`~/dev/code/1111-parallels-site`** — EXEMPT (**ruled 2026-10-04: JP, live in chat — he meant this
+  repo by "the jpfinley.com should be ignored"**). 1111parallels.com, the 11:11 Parallels venture site,
+  `origin` = [`FinTechGlobalSolutions/1111-parallels-site`](https://github.com/FinTechGlobalSolutions/1111-parallels-site).
+  The mirror already merged there ([PR 24](https://github.com/FinTechGlobalSolutions/1111-parallels-site/pull/24),
+  2026-10-04) stays; no further mirror is written, landed or reported as drift. Encoded as a name-based skip in
+  `bin/gov-exempt-repos.sh`'s `EXEMPT_REPOS` (`CHG-2026-10-04-001`).
+
+- ⛔ **`~/dev/code/NGM6Update`** — EXEMPT (**ruled 2026-10-04: JP, live in chat — "the netgear one"
+  should be ignored**). A fork of the Nighthawk M5 restore utility for the M6 series,
+  `origin` = [`FinTechGlobalSolutions/NGM6Update`](https://github.com/FinTechGlobalSolutions/NGM6Update); not
+  a venture repo. Its remote already holds an unmerged `chore/governance-sync-680c1a1` branch from an
+  earlier landing attempt (one commit, generated files only); it was left in place, not deleted (branch
+  deletion is a JP call). `~/dev/code/netgear` is not a git repository and was never governed. Encoded as a
+  name-based skip in `bin/gov-exempt-repos.sh`'s `EXEMPT_REPOS` (`CHG-2026-10-04-001`).
 
 ## Hard placement constraints (learned, non-negotiable)
 
