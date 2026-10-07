@@ -18,6 +18,7 @@ other source is a defect: flag it.
 | **Obsidian vault (LAW)** | `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Prosperity Springs` |
 | Campaign hub | `…/Prosperity Springs/CAMPAIGNS/ACTIVE/Quorum Books/` (corrected 2026-08-10, CENSOR W0 — live vault folder is "Quorum Books", not "HOA SaaS"; the old name is preserved in older decision-entry source citations as audit trail, per D-086) |
 | **Sentinel toolkit** | `~/dev/sentinel` → `github.com/FinTechGlobalSolutions/sentinel` |
+| **AWS Organization (org-level Terraform and AWS account docs)** | `~/dev/code/ops-aws-organization` → `github.com/FinTechGlobalSolutions/ops-aws-organization` (private; created 2026-10-06, QB-392; repo name must satisfy the org `Nomen` ruleset, prefix `ops-`) |
 | **Worktree root (parallel-session standard)** | `~/dev/code/qb/worktrees/<branch-slug>/` — sibling to the main checkout, one per active session; see `git-workflow.md` |
 | **Ceres source / installer** | `~/dev/code/memory-os-installer` |
 | **Ceres CLI** | `~/.local/bin/ceres` |
@@ -103,6 +104,25 @@ to be guessed at.
 
 Earlier `Session Statistics Closeout — …` notes stay at the vault root as audit trail (D-086);
 new close-outs go to `Session Closeouts/`.
+
+## Fabric pattern library (added 2026-10-06, CHG-2026-10-06-004)
+
+JP's **AI Fabric Patterns** library (operator docs: `docs/ai-fabric-patterns.md`): reusable Fabric prompt patterns for the Fabric CLI (`fabric-ai`, Homebrew), Obsidian (Mesh AI plugin) and
+agents (`fabric-patterns` skill). One source; everything else is generated or a pointer.
+
+| Thing | Path |
+|---|---|
+| Library root (README, CHANGELOG) | `…/Prosperity Springs/x VAULT OPS/AI Fabric Patterns/` |
+| Pattern card (Obsidian properties, tags, links) | `…/AI Fabric Patterns/custom/<name>/SKILL.md`; index base `…/AI Fabric Patterns/AI Fabric Patterns.base` |
+| Pattern source — edit only here | `…/AI Fabric Patterns/custom/<name>/system.md` (Fabric `CUSTOM_PATTERNS_DIRECTORY`) |
+| Mesh AI mirror (generated) | `…/AI Fabric Patterns/mesh/<name>.md` — rebuilt by `~/.local/bin/pattern-sync` |
+| Stock patterns, Mesh AI copy | `…/AI Fabric Patterns/fabric-stock/` (CLI copy: `~/.config/fabric/patterns/`, overwritten by `fabric-ai -U`) |
+| Contexts source | `…/AI Fabric Patterns/contexts/<name>.md` → copied (not linked: Fabric refuses symlinks) into `~/.config/fabric/contexts/` |
+| Agent and scout drafts awaiting JP | `…/AI Fabric Patterns/_proposed/<name>/` |
+| Fabric config (secrets; never commit) | `~/.config/fabric/.env` |
+| Agent skill | `~/dev/sentinel/governance/skills/fabric-patterns` → linked into `~/.claude/skills/` |
+| Obsidian styling | `…/Prosperity Springs/.obsidian/snippets/ai-fabric-patterns.css` (cards and hub); banner `…/Prosperity Springs/attachments/ai-fabric-patterns-banner.svg` (the vault's attachment folder; its attachment plugins move images there) |
+| Scheduled-job runner for the vault | `~/Applications/Fabric Library Agent.app` — runs `pattern-scout` / `pattern-sync` (chosen by `FABRIC_JOB`), because launchd-started `bash`/`python3` are denied the iCloud vault |
 
 ## DEAD PATHS — never write, never reference, never recreate
 
@@ -333,6 +353,9 @@ its REJECTED-then-adopted reasoning are left intact, not deleted.
 | ceres-opensearch-dashboards | 5601 | 127.0.0.1 only | |
 | **Other** | | | |
 | Obsidian Local REST API | 27124 | — | |
+| Obsidian Semantic Notes Vault MCP (`semantic-vault-mcp` plugin) | 27126 (HTTPS) | 127.0.0.1 only | Registered 2026-10-06 (CHG-2026-10-06-008, -009). HTTPS only: with HTTPS on, the plugin serves HTTPS alone, so its HTTP setting (27125) is inert — 27125 stays reserved to this plugin, not free. Plugin defaults (HTTP 3001, HTTPS 3443) are not used; 3001 is the Quorum Books api. Claude Code user-scope MCP entry `obsidian-semantic` → `https://127.0.0.1:27126/mcp`; the plugin's self-signed cert is trusted via `NODE_EXTRA_CA_CERTS` = `~/.claude/certs/obsidian-semantic-vault.pem` in `~/.claude/settings.json` (cert expires 2027-10-07; re-export it if the plugin regenerates it). Separate from the `obsidian` entry (Local REST API, 27124). |
+| Obsidian Task Genius MCP (`obsidian-task-progress-bar` plugin, Task Genius) | 7777 | 127.0.0.1 only | Registered 2026-10-06 (CHG-2026-10-06-010); in use before it was recorded. Bearer-token auth (unauthenticated request → 401). Claude Code MCP entry `prosperity-springs-tasks`. |
+| Fabric REST API (`fabric-ai --serveOllama`) — **reserved** | 8090 | 127.0.0.1 only | For LaunchAgent `com.jpfinley.fabric-serve` (wrapper `~/.local/bin/fabric-serve`, key from Keychain `fabric-serve`/`api-key`). Reserved 2026-10-06 (CHG-2026-10-06-004); whether it is running is a live check (`launchctl print`, `lsof -i :8090`), never implied by this row. 8080 is `ceres-open-webui`. |
 
 General rules that apply to every row above: Vite-family services run `strictPort: true` — a
 port conflict must FAIL LOUDLY, never silently relocate. Every datastore above (QB and Ceres
