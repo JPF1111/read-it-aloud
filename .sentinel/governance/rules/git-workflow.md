@@ -298,7 +298,8 @@ gate-receipt/custos pattern as everything else in this file.
   1. **Merged and pushed** — `HEAD` must be an ancestor of `origin/<default-branch>` and the
      working tree must be clean. Uncommitted, unpushed, or unmerged work blocks closeout.
   2. **PR thread disposition** — for PRs authored by the session (heuristic: `gh pr list
-     --search author:@me`, updated within the last 12h — not session-ID-scoped, gh has no
+     --search author:@me` and, since QB-413, `author:app/tutanus`, updated within the last
+     12h — not session-ID-scoped, gh has no
      such concept; generous window chosen to bias toward catching real misses over false
      confidence), every review thread must be resolved AND have a reply. A thread marked
      resolved with zero reply reads as dismissed/ignored, not dispositioned, and blocks.
@@ -308,6 +309,21 @@ gate-receipt/custos pattern as everything else in this file.
 - Fails OPEN (exit 0) on any internal error (not a git repo, `gh` unauthenticated, network
   failure) with a warning printed — this is a tripwire-plus-audit control, not a filesystem
   permission, same posture as the worktree-lock guard above.
+
+**Vault exemption — the hook now matches the written rule (2026-10-07).** The Obsidian vault
+(`canonical-paths.md`, "Obsidian vault (LAW)"; `$QB_VAULT` overrides the path, as in
+`vault-guard.sh`) is exempt from check 1, exactly as the
+[Clean-state standing rule](#clean-state-standing-rule-ratified-2026-08-25) already exempts it: it
+is iCloud-synced and self-controlled, not a PR-workflow repo, and Obsidian rewrites workspace and
+plugin state constantly, so a dirty tree there is not lost work. Until now the hook had no such
+exemption and blocked a closeout run from the vault whenever the vault was dirty or an
+auto-commit ahead of origin — which obsidian-git's 10-minute commit/push cycle makes routine. The
+match is exact — the realpath of the repo's git toplevel must equal the vault's realpath (no
+marker file, no name or prefix match), so no other repo is exempted. A `$QB_VAULT` that is not an
+absolute path to an existing directory is ignored with a warning and the canonical path is used,
+so a bad override cannot switch the exemption off. Check 2 (PR thread disposition) still applies
+to the vault (the vault repo has no PRs, so it does not trigger in practice), and the hook prints
+one informational line whenever it takes the exemption.
 
 **Override — verified, never a matter of trust (`bin/closeout-override.sh`, revised same
 day):** JP, on first seeing this design: "I don't know what's right or wrong so I shouldn't
@@ -353,6 +369,17 @@ fast-forwarded and the worktree removed (fast-forward for repos with no remote; 
 `JPF1111` repos are pushed under that identity and the CLI is switched back). `sentinel-service`
 runs it after every `govsync --apply` that wrote anything and reports `landed` / `land_failed`
 in `logs/service/governance-status.json`. First live run: 29 repos in one pass.
+
+**Where to look when a repo did not land (since 2026-10-07).** `governance-status.json` is one
+overwritten cycle and names only the current failures (`land_failed_repos`); the durable record
+is `logs/service/governance-sync-history.jsonl` — one JSON line per cycle carrying the trigger,
+the sentinel commit, each repo's outcome and the reason it failed or was exempt, and the cycles
+that never started because the lock was held. The raw per-cycle output lives beside it in
+`logs/service/governance-sync-runs/`. Both are bounded (400 cycles / 40 raw runs per kind), so
+neither is an unbounded write under AGENTS.md §4. Before this, the `.out` files were truncated
+at the start of each run and `launchd.out` stamped lines with the time but no date, so a failed
+landing stopped being diagnosable once the next cycle began — which is exactly what defeated the
+2026-10-07 question about the-archives' unlanded 2026-10-04 mirror.
 
 **Honest limits, stated so this isn't mistaken for airtight:** the PR-ownership heuristic is
 time-window based, not session-scoped (gh has no session concept) — a PR someone else
