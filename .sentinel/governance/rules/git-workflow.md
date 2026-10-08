@@ -297,18 +297,80 @@ gate-receipt/custos pattern as everything else in this file.
   closeout call reaches Ceres, it checks the git repo at the hook's `cwd`:
   1. **Merged and pushed** — `HEAD` must be an ancestor of `origin/<default-branch>` and the
      working tree must be clean. Uncommitted, unpushed, or unmerged work blocks closeout.
-  2. **PR thread disposition** — for PRs authored by the session (heuristic: `gh pr list
-     --search author:@me` and, since QB-413, `author:app/tutanus`, updated within the last
-     12h — not session-ID-scoped, gh has no
-     such concept; generous window chosen to bias toward catching real misses over false
-     confidence), every review thread must be resolved AND have a reply. A thread marked
-     resolved with zero reply reads as dismissed/ignored, not dispositioned, and blocks.
+  2. **PR thread disposition** — for PRs the closing session owns (see *Ownership* below),
+     updated within the last 12h (generous window chosen to bias toward catching real misses
+     over false confidence), every review thread must be resolved AND have a reply. A thread
+     marked resolved with zero reply reads as dismissed/ignored, not dispositioned, and blocks.
   An OPEN PR in that window also blocks (not merged yet). A CLOSED-without-merge PR is
   reported informationally only — this control cannot mechanically verify "a stated reason
   was recorded," so it doesn't try to gate on it.
+- **Ownership — the session's own work, not everyone's (2026-10-07, sentinel #88/#89/#103).**
+  Candidate PRs are those authored by `@me` or (since QB-413) `app/tutanus`, but both
+  identities are shared machine-wide, so author alone gated every session on every other
+  session's open PRs, and read-only reviewers on the PRs they were reviewing. A candidate now
+  counts only when its head branch is the session's, by its Claude Code session id or the
+  closeout call's Ceres session id: a branch it **claimed** (a `claim` line in the
+  [worktree-lock](#worktree-lock--claim-before-work-release-at-close-out-directed-by-jp-2026-08-26)
+  ledger `locks.jsonl` — still its work once released), a branch whose lock it **holds** now (a
+  takeover it kept to finish the work), or the cwd checkout's branch (unless detached, the
+  default branch, or another session's live lock on that very checkout). A takeover released
+  again — an orphan sweep — owns nothing. A PR on another session's claimed or held branch is
+  named in one informational line; a PR on a branch **no** session claimed (govland's claims
+  carry no session id; a session that never claimed) is a WARNING — it could be this
+  session's. A session with no attributable branch at all is warned, not blocked — which is why
+  claiming the worktree lock with `--session-id` matters: it is what keeps a session's own
+  unfinished PR blocking.
+- **Guest checkouts.** A checkout under another session's **live** lock (a reviewer in the
+  author's worktree) has its check-1 findings reported, not blocking. The match is by worktree
+  path only — the lock's worktree must be the cwd's git toplevel — never by branch name: a
+  peer's lock on a same-named branch elsewhere waives nothing here. An ownerless or released
+  lock does not make a guest.
+- **Read-only agents.** An `agent_type` of exactly `judge` or `scout` (set by Claude Code inside
+  a subagent or an `--agent` session) blocks on nothing — it cannot commit, push or open a PR,
+  and a subagent shares its parent's session id, so ownership would hand it the parent's PRs. A
+  missing, empty or other `agent_type` exempts nothing. **Known risk:** a judge subagent runs
+  under its parent's session id and can call `agent_closeout` with the parent's Ceres session
+  id, closing out the *parent's* Ceres session while the parent's work is unfinished; the hook
+  cannot tell that from a judge closing its own review. So the exemption is never silent: every
+  finding it suppresses is appended, with the agent type and ids, to
+  `~/dev/sentinel/logs/closeout-overrides/readonly-agent-exemptions.jsonl` (append-only, beside
+  the override ledger), and if that line cannot be written the findings stand and the closeout
+  blocks.
+- **govsync output is not the session's work (2026-10-07, sentinel #103).** `bin/govsync`
+  writes standing law into every governed repo's primary checkout and leaves it uncommitted for
+  `govland` to land, so a session working there was blocked by a dirty tree it never touched.
+  Check 1 now sets aside an uncommitted path that is govsync's own output, proven unedited —
+  which paths govsync writes and what it writes there is read from `bin/govsync` itself, and
+  each path must pass two tests. **Content:** `AGENTS.md` carries govsync's header, its body
+  hashes to the header's `body-sha256`, and that `body-sha256` is the sha256 of the sentinel
+  master `governance/AGENTS.md` at sentinel `HEAD` or at the header's commit (what govsync's own
+  freshness test compares against — a body that merely hashes to its own header is not the
+  law); each copied rule file is byte-identical to the sentinel source (now, or at the marker's
+  `source-commit`); the `.generated-by-sentinel` marker agrees with `AGENTS.md`'s header and the
+  master; the two relative symlinks, the `CLAUDE.md` loader and the generated `.aider.conf.yml`
+  match exactly. **Over what HEAD held:** govsync refuses to overwrite hand-authored files, so
+  wiping one to govsync's text is not govsync — `AGENTS.md` only over nothing, a symlink or a
+  generated file; the bare `CLAUDE.md` loader only over nothing or a symlink to `AGENTS.md` (the
+  prepend only onto a committed file not already loading it); `.aider.conf.yml` only over
+  nothing or a generated one; the rules and marker only into a bundle that is absent or marked.
+  Accepted paths are listed. Any other dirty path still blocks and is named; a hand-edited,
+  header-stripped or forged generated file, a deletion, or a staged copy that differs from the
+  working tree is not proven and blocks. If `bin/govsync` cannot be read, nothing is set aside.
+- **What the agent sees.** A block (exit 2) shows the agent the block message and every note.
+  On an allow, Claude Code sends a hook's stderr to its debug log only, so the hook prints a
+  PreToolUse JSON object whose `hookSpecificOutput.additionalContext` carries every warning and
+  informational line — that is how "warned" and "reported" above reach the agent — with no
+  `permissionDecision` (an `"allow"` would skip the permission prompt). `hook-closeout-guard.sh`
+  passes it through.
+- **Known limits.** A session can escape check 1 on its own worktree by deliberately taking its
+  own lock over under a different session id (`worktree-lock.sh takeover --session-id <other>`):
+  the checkout then reads as a guest. The takeover is an attributed ledger entry (owner and
+  reason), so it is visible after the fact, not prevented. Own work done inside a peer's locked
+  worktree is likewise reported as the peer's; attributing a dirty tree path by path is the
+  separate dirty-tree work (session `cc-20261007-closeout-guard-dirty-tree-attribution`).
 - Fails OPEN (exit 0) on any internal error (not a git repo, `gh` unauthenticated, network
-  failure) with a warning printed — this is a tripwire-plus-audit control, not a filesystem
-  permission, same posture as the worktree-lock guard above.
+  failure) with a warning — reported to the agent as above — this is a tripwire-plus-audit
+  control, not a filesystem permission, same posture as the worktree-lock guard above.
 
 **Vault exemption — the hook now matches the written rule (2026-10-07).** The Obsidian vault
 (`canonical-paths.md`, "Obsidian vault (LAW)"; `$QB_VAULT` overrides the path, as in
@@ -381,11 +443,14 @@ at the start of each run and `launchd.out` stamped lines with the time but no da
 landing stopped being diagnosable once the next cycle began — which is exactly what defeated the
 2026-10-07 question about the-archives' unlanded 2026-10-04 mirror.
 
-**Honest limits, stated so this isn't mistaken for airtight:** the PR-ownership heuristic is
-time-window based, not session-scoped (gh has no session concept) — a PR someone else
-touches in the same 12h window could be caught by a different session's closeout attempt; a
-PR this session touched outside the window would be missed. This binds Claude Code sessions
-only, same as every other `PreToolUse` guard in this file.
+**Honest limits, stated so this isn't mistaken for airtight:** PR ownership is decided by the
+worktree-lock registry, not by gh (which has no session concept) — see *Ownership* in the
+closeout-guard section above. A session that never claimed a lock, and whose cwd is not on
+its PR's branch, has nothing attributed: its open PR is warned about, not blocked on. The 12h
+window still applies, so a PR this session touched outside it is missed. (Until 2026-10-07 the
+heuristic was author-plus-window, so one session's PR blocked every other session's closeout —
+sentinel #88/#89/#103.) This binds Claude Code sessions only, same as every other `PreToolUse`
+guard in this file.
 
 **Build-time evidence (2026-08-26):** live-tested end to end against real repos and a real
 GitHub PR (sentinel#17) — dirty-tree block, GraphQL thread-resolution query (caught and fixed
