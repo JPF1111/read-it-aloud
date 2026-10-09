@@ -19,7 +19,7 @@ other source is a defect: flag it.
 | Campaign hub | `…/Prosperity Springs/CAMPAIGNS/ACTIVE/Quorum Books/` (corrected 2026-08-10, CENSOR W0 — live vault folder is "Quorum Books", not "HOA SaaS"; the old name is preserved in older decision-entry source citations as audit trail, per D-086) |
 | **Sentinel toolkit** | `~/dev/sentinel` → `github.com/FinTechGlobalSolutions/sentinel` |
 | **AWS Organization (org-level Terraform and AWS account docs)** | `~/dev/code/ops-aws-organization` → `github.com/FinTechGlobalSolutions/ops-aws-organization` (private; created 2026-10-06, QB-392; repo name must satisfy the org `Nomen` ruleset, prefix `ops-`) |
-| **Worktree root (parallel-session standard)** | `~/dev/code/qb/worktrees/<branch-slug>/` — sibling to the main checkout, one per active session; see `git-workflow.md` |
+| **Worktree roots** | Registry: [`worktree-roots.txt`](https://github.com/FinTechGlobalSolutions/sentinel/blob/main/governance/rules/worktree-roots.txt), the only list. A worktree made by hand or by an agent defaults to `~/dev/code/qb/worktrees/<branch-slug>/`. The Claude Desktop app and Claude Code subagents create theirs under `<repo>/.claude/worktrees/<name>/`. Every worktree carries one standard wherever it lives (JP 2026-10-07: no work lost or left uncommitted): lock-claimed, monitored, guarded, landed on the default branch, and removed once landed. See `git-workflow.md`, "Parallel work"; tooling gaps are tracked in [sentinel#118](https://github.com/FinTechGlobalSolutions/sentinel/issues/118). |
 | **Ceres source / installer** | `~/dev/code/memory-os-installer` |
 | **Ceres CLI** | `~/.local/bin/ceres` |
 | **Ceres MCP service** | LaunchAgent `io.ceres.memory.mcp` |
@@ -160,8 +160,8 @@ Ruled on rather than left ambiguous:
   what path, just resolve it"):** since the worktree-isolation guard rolled out with
   sentinel#36, the primary checkout's pre-commit hook blocks direct commits there, so the
   generated mirror is committed on a throwaway worktree branch and fast-forwarded into the
-  default branch (`git worktree add <tmp> -B chore/governance-sync-<commit> <default>` →
-  `govsync --repo <tmp> --apply` → commit there → `git merge --ff-only` in the checkout →
+  default branch (`git worktree add ~/dev/code/qb/worktrees/<slug> -B chore/governance-sync-<commit> <default>` →
+  `govsync --repo <that worktree> --apply` → commit there → `git merge --ff-only` in the checkout →
   `git worktree remove`). No commit is created in the primary checkout, so the guard and
   this ruling agree; `--no-verify` is not the answer.
 - ⛔ **`~/dev/code/slugthugshield-v3-audit-old`** — EXEMPT (not deleted, still on disk and in

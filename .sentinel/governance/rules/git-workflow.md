@@ -64,9 +64,51 @@ Every parallel CODE session gets its own git worktree — a separate physical di
 sharing one repo history. Sessions cannot see each other's uncommitted work; the
 shared-working-tree collision class is eliminated structurally, not by discipline.
 
-- **Location:** `~/dev/code/qb/worktrees/<branch-slug>/` — sibling to the main
-  checkout, never nested inside it (nested worktrees confuse tooling). See
-  `canonical-paths.md` for the registered root.
+- **The standard is the outcome, and there is only one (JP, 2026-10-07):** "no work is ever
+  lost, or left un committed. thats the standard so if there is a better system which ensures
+  that end result and its adheared to universally thats whats acceptable. what I dont care for
+  is having to seperate standards, this isnt acceptable." Where a worktree lives is not the
+  rule. Every worktree gets the same controls, with no exceptions and no second standard,
+  wherever it lives and whoever created it (a person, an agent, the Claude Desktop app, or a
+  Claude Code subagent):
+  1. it is claimed in the worktree-lock registry as soon as its path is known (lock section
+     below). The session that creates it claims it. A Claude Code subagent's isolated worktree is
+     claimed by the subagent as its first action; failing that, the spawning session claims it
+     when the subagent returns. Either way it counts as part of the spawning session's work;
+  2. it is found and checked by the daily lock report and the open-work report;
+  3. it is covered by the worktree and closeout guards;
+  4. its work is committed and lands on the repo's default branch: through a PR where the repo
+     has a remote, and by the local-commit path in `canonical-paths.md` (JP, 2026-09-07) where it
+     has none (Distyll, vigilum);
+  5. once landed, it is removed along with its branch.
+
+  **Where worktrees are created.** A worktree made by hand, by an agent or by a script defaults
+  to `~/dev/code/qb/worktrees/<branch-slug>/`. The Claude Desktop app and Claude Code subagents
+  create theirs under `<repo>/.claude/worktrees/<name>/`. The one registry of worktree roots is
+  [`worktree-roots.txt`](https://github.com/FinTechGlobalSolutions/sentinel/blob/main/governance/rules/worktree-roots.txt), which lists every root named here; this file keeps
+  no second list. Creating a worktree under a root that is not in that registry breaks control 2.
+  Either create it under a registered root, or register the new root in `worktree-roots.txt`
+  (a sentinel PR) before or together with its first use.
+
+  **Known gaps, tracked in [#118](https://github.com/FinTechGlobalSolutions/sentinel/issues/118).**
+  Until #118 lands, control 2 is only partly in force:
+  - Both reports find worktrees by scanning registered roots rather than by asking git.
+  - The open-work report does not yet see linked worktrees at all. It does see uncommitted work
+    in each primary checkout it lists, Distyll and vigilum included.
+  - The closeout guard is no general backstop. It checks only the checkout the closing session
+    is standing in, and only for repos with a remote. It does not see a subagent's worktree, any
+    other worktree, or Distyll and vigilum.
+
+  #118 changes both reports to list worktrees with `git worktree list` for every governed repo,
+  so a worktree is covered wherever it lives without anyone editing a roots file.
+
+  Tooling must resolve a destructive command's target from its explicit operands, so a worktree
+  nested inside its primary checkout is never mistaken for that checkout. A command that sweeps
+  a whole primary checkout (`git clean -ffdx`, or deleting the checkout) also reaches every
+  worktree nested under its `.claude/worktrees/`, so never run one in a checkout that holds
+  worktrees. This replaces the 2026-07-30 wording "sibling to the main checkout, never nested
+  inside it". JP ruled on 2026-10-07 that the location was never the rule: the outcome is. Ceres
+  decision d9012959-b9f2-468e-b250-ad1ef314b683 (a Ceres record, with no web link).
 - **Session-identifying naming convention (canonical, ratified 2026-08-16):**
   `<slug>` starts with `<AGENT-CODE><MMDDYY>-<short-description>`. The corresponding
   worktree branch name should be `wt/<slug>`. This is how a second session — human or
@@ -97,8 +139,15 @@ shared-working-tree collision class is eliminated structurally, not by disciplin
   push. The Node pin is load-bearing (Node 26 breaks `better-sqlite3`) and does not
   travel with `git worktree add` — a worktree created without this step silently runs
   gate checks (typecheck, pre-push) on whatever Node the shell happens to have, which can
-  pass green on the wrong runtime and mask a pin-specific failure until CI.
-- One worktree per active session. A session works ONLY in its own worktree.
+  pass green on the wrong runtime and mask a pin-specific failure until CI. A worktree the
+  Claude Desktop app created for a session (`<repo>/.claude/worktrees/<name>/`) skips the
+  `git worktree add` step, but nothing else: the session claims its lock as its first action
+  and then follows every other step here. The same holds for a Claude Code subagent's isolated
+  worktree: the subagent claims it as its first action, or failing that the spawning session
+  claims it when the subagent returns (control 1 above).
+- One worktree per active session. A session works ONLY in its own worktree. A subagent's isolated
+  worktree does not count toward its parent session's one-worktree limit, though its work is still
+  the parent's to land (control 1 above).
 - **Remove when merged:** `git worktree remove <path>` — never `rm -rf` a worktree
   directory (leaves stale metadata in `.git/worktrees/`).
 - **The shared main checkout is PULL-ONLY. HARD RULE, now MECHANICALLY ENFORCED
@@ -295,8 +344,10 @@ gate-receipt/custos pattern as everything else in this file.
 - `bin/hook-closeout-guard.sh` (+ `.py`) — a Claude Code `PreToolUse` hook wired machine-wide
   in `~/.claude/settings.json`, matcher `mcp__ceres__agent_closeout`. Before any session's
   closeout call reaches Ceres, it checks the git repo at the hook's `cwd`:
-  1. **Merged and pushed** — `HEAD` must be an ancestor of `origin/<default-branch>` and the
-     working tree must be clean. Uncommitted, unpushed, or unmerged work blocks closeout.
+  1. **Merged and pushed** — `HEAD` must be an ancestor of `origin/<default-branch>`, and
+     every dirty path in the working tree that is **this session's** must be committed. The
+     session's own uncommitted, unpushed or unmerged work blocks closeout; dirt it inherited
+     does not (see *Dirty-path attribution* below).
   2. **PR thread disposition** — for PRs the closing session owns (see *Ownership* below),
      updated within the last 12h (generous window chosen to bias toward catching real misses
      over false confidence), every review thread must be resolved AND have a reply. A thread
@@ -324,7 +375,24 @@ gate-receipt/custos pattern as everything else in this file.
   author's worktree) has its check-1 findings reported, not blocking. The match is by worktree
   path only — the lock's worktree must be the cwd's git toplevel — never by branch name: a
   peer's lock on a same-named branch elsewhere waives nothing here. An ownerless or released
-  lock does not make a guest.
+  lock does not make a guest. **The waiver stops at the guest's own dirty paths (2026-10-07,
+  judge finding F6 on PR #105, closed by sentinel #110).** It exists because a guest cannot be
+  held to a tree it did not dirty; it was never a licence to leave the guest's *own* work
+  uncommitted in somebody else's worktree, which is exactly the lost work this check exists to
+  prevent. **Attribution alone is not enough here, though** (2026-10-08 re-review): a path can be
+  new since the snapshot because the **lock holder is working in that tree right now**, and
+  blocking on that told the model to commit a peer's live work. So in a guest tree a path blocks
+  only when the closing session's own transcript shows it wrote that path; everything else is a
+  loud warning naming the paths, saying they are most likely the lock holder's and to leave them.
+  With nothing attributable — no snapshot — the whole tree is waived exactly as before.
+  **The authorship check is a lower bound, by design.** It reads the file-writing tools'
+  arguments out of the session's transcript, so a file written by a shell command through `Bash`
+  is invisible to it, and a subagent's writes land in its own `subagents/*.jsonl` rather than the
+  parent transcript. Both fall to the warning, never to a block — in the one place where
+  over-blocking would move somebody else's work, under-blocking is the right failure direction.
+  The backstop is that nothing is actually lost: a file a guest leaves behind in the host's tree
+  blocks **the lock holder's** own closeout, because there it is unattributable dirt in the
+  holder's own checkout.
 - **Read-only agents.** An `agent_type` of exactly `judge` or `scout` (set by Claude Code inside
   a subagent or an `--agent` session) blocks on nothing — it cannot commit, push or open a PR,
   and a subagent shares its parent's session id, so ownership would hand it the parent's PRs. A
@@ -372,6 +440,149 @@ gate-receipt/custos pattern as everything else in this file.
   failure) with a warning — reported to the agent as above — this is a tripwire-plus-audit
   control, not a filesystem permission, same posture as the worktree-lock guard above.
 
+**Dirty-path attribution — a session is blocked for its own dirt, not everyone's (2026-10-07,
+sentinel #110).** The govsync-output rule above excuses one specific, very common kind of
+inherited dirt by *proving its provenance*; this excuses the general case by *attributing it to a
+session*. **The two compose, and neither widens the other:** a dirty path blocks only when it is
+neither proven govsync output nor already dirty when this session started and byte-identical
+since. Provenance proof is the stronger of the two where it applies — it needs no prior
+observation, so it also covers sessions older than the snapshot hook and other vendors' sessions
+— but it can only ever recognise govsync's own files. Everything else inherited is this rule's
+job: the untracked `Instruct_BKUP/` directory a parent session created (the 2026-09-16 failure), a
+peer session's scratch file, a half-finished edit nobody has claimed.
+
+Check 1 used to require an absolutely clean working tree with
+no notion of *who* dirtied it, which produced blocks no agent could satisfy by doing its job
+correctly. Two live failures: a read-only reviewer subagent in `~/dev/code/the-archives` blocked
+by an untracked `Instruct_BKUP/` directory its **parent** session had created (2026-09-16), and a
+session whose own work was committed, pushed, PR'd and merged blocked by three govsync-regenerated
+files that were **already uncommitted when it started** (2026-10-05/06). In both, the nearest fix
+available to the blocked agent was to commit or stash files it does not own — which the
+[worktree-isolation rule](#parallel-work--worktree-isolation-canonical-ratified-2026-07-30)
+forbids outright ("if a checkout has uncommitted work that cannot be attributed to a known
+in-flight session, STOP and surface it — do not commit, stash, or move it on an assumption"). Two
+rules pointed opposite ways; this is the repair.
+
+**Git records no author for an uncommitted change.** `git status --porcelain` says a path is
+dirty, never who dirtied it. The only possible evidence is an observation made *before* the
+session acted, so `bin/tree-snapshot.py` records one: the first time a Claude Code session is
+seen in a git repo — at `SessionStart`, and **first sight wins** so a later run never overwrites
+the earlier snapshot — every dirty path is written down with a digest of its working-tree content,
+its porcelain status code, and its index blob when staged.
+
+**A late first sight is refused, not trusted (2026-10-08, judge review of PR #111).** A snapshot
+is only evidence of the tree *before* the session acted, so one taken afterwards is worse than
+none: it shows the session's own edits as pre-existing and lets it close out on work it abandoned,
+while the report tells it "do NOT commit, stash or move them". The engine therefore marks a
+snapshot `pre_tool_use: false`, and the guard treats that exactly as no snapshot, whenever
+the `SessionStart` source is anything other than `startup`, the transcript already contains a
+`tool_use`, or the transcript cannot be read at all. **Trust is granted, not withheld by a
+list** — an allow-list of known-late sources had already gone stale when `fork` shipped
+(v2.1.214; a fork carries a *new* session id, so its parent's dirt read as inherited), so
+`compact`, `resume`, `clear`, `fork`, an unknown value and a missing one all taint.
+`bin/session-ledger.py` has keyed its own re-injection on the late sources since 2026-10-05, so
+that `SessionStart` fires again mid-session is observed, not assumed.
+
+**The guard re-asks the question at closeout**, against the transcript Claude Code hands *it*:
+the snapshot's `taken_at` must precede the first `tool_use` recorded there. A transcript that is
+absent or unreadable at closeout refuses the snapshot — leniency about a missing file belongs at
+snapshot time, where it may not be written yet, not at closeout, where the session has certainly
+acted. One exception: a transcript that exists and holds no `tool_use` at all is accepted, since
+a session that ran no tool can have neither minted a forged snapshot (itself a tool call) nor
+dirtied the tree. **This stops the naive forge only.** Claude Code supplies the path, but the
+session can write the file it names; doing so is the same class of act as writing the snapshot
+JSON by hand, which this design already concedes. Deliberate tampering is out of scope — a
+tripwire with an audit trail, the posture `AGENTS.md` §9f states for every guard here. `UserPromptSubmit` was wired alongside `SessionStart` until the
+same review and was removed: the only prompt at which it could take a valid snapshot is the first,
+which `SessionStart` already covers, while every later prompt in a newly-entered repo produced
+precisely the laundering snapshot above. Only a snapshot this script wrote **as the hook** counts;
+the `write` subcommand tags its output `origin: "cli"` and the guard ignores it, so a blocked
+session cannot unblock itself by running the tool the block message used to name.
+
+**Honest coverage, narrower than it first looks:** a trustworthy snapshot exists only for the repo
+the session's `cwd` pointed at when the session **started**. A worktree the session creates
+mid-session is never covered, and every dirty path there blocks exactly as before.
+
+**The common case is covered, measured not assumed.** `SessionStart` does fire in Desktop
+app worktree sessions, well before the first tool call. Transcripts record it as an
+**attachment** — `type: "attachment"`, `attachment.type: "hook_success"`,
+`hookName: "SessionStart:startup"`, `hookEvent: "SessionStart"` — and *not* as the
+`*_hook_summary` system record, which is why a first pass at this question wrongly concluded
+the event was never logged. Measured 2026-10-09 by parsing every
+`~/.claude/projects/*claude-worktrees*/*.jsonl`: of **33** transcripts, **20** carry exactly
+`attachment` / `hook_success` / `hookName: "SessionStart:startup"`; **23** carry a SessionStart
+attachment of any kind (the other 3 are `hook_non_blocking_error`, on 2026-09-18 / 2.1.267,
+2026-09-24 / 2.1.280 and 2026-09-28 / 2.1.284); **10** carry none. Where it is logged it is
+always **before** the first `tool_use` — by 3.7-290 s for the 20, or 3.5-290 s counting the error
+records. (An earlier version of this text said 8-63 s; that was the range of the 15 `ceres-c*`
+sessions alone, not of the set. The figures drift as sessions are created, so they are stated with
+the date and the method rather than as fixed truths.)
+
+**Of the 10 with no record, 9 are one window on 2026-10-07 between 17:23 and 21:17 UTC**, all on
+2.1.289 — a build that also appears among the transcripts that *do* carry it, so this is not a
+version boundary. The tenth is an 11-line transcript (`92464979`, `CC091712-design-tracker`,
+2026-09-19). **Four transcripts before that window lack the exact `hook_success` record**, and
+naming them matters because an earlier version of this text wrongly claimed every session outside
+the window had it: `92464979`, plus the three `hook_non_blocking_error` ones above
+(`45814527`, `92d6a18b`, `890b6c29`).
+
+What this does establish: when the hook is logged it always precedes the session's first action,
+the gap is never marginal, and the unlogged window is confined to 2.1.289 on one day. What it does
+not establish is why those 10 carry nothing — hook failure and absent logging are both consistent
+with the data. Either way it fails safe: no snapshot means this check blocks exactly as it did
+before dirty-path attribution existed. Wiring is tracked at
+`governance/claude/tree-snapshot-hooks.json` and merged into `~/.claude/settings.json` by
+`bin/install-claude-surfaces.sh`; the store is `logs/tree-snapshots/` — a `latest-<session>-<repo>.json`
+pointer plus an append-only `snapshots.jsonl` ledger, the same two-file pattern as gate-receipt
+and the worktree-lock registry. **Not** claimed as tamper-detection: nothing reads the ledger,
+so it is an audit record, not a control.
+
+At closeout the guard classifies every dirty path. **Every ambiguous case blocks:**
+
+Paths already excused as proven govsync output never reach this table; what follows applies to
+the remainder.
+
+| the path, at closeout | verdict |
+|---|---|
+| dirty, and there is no usable snapshot for this session + repo | **blocks** — same verdict, exit code and stdout as before this existed; stderr gains one line naming the reason |
+| dirty, and absent from the snapshot | **blocks** — the session created it |
+| dirty, in the snapshot, digest **changed** since | **blocks** — it was already dirty and the session edited it anyway |
+| dirty, in the snapshot, digest **unchanged** since | **reported, does not block** — inherited, and named so it stays visible |
+
+The third row is what stops this being attribution in name only: path presence alone would clear
+a session that edited a file somebody else had already dirtied, so the comparison is a content
+digest, not a path list. The fourth row's informational line names the paths and repeats the
+worktree-isolation instruction — **do not commit, stash or move them** — so inherited dirt is
+surfaced rather than silently swallowed or silently adopted.
+
+**Honest limits, stated so this is not mistaken for proof of authorship:**
+- **Missing evidence never relaxes the gate.** No snapshot means the pre-2026-10-07 behaviour,
+  with identical exit codes — the stderr line naming the reason is new, and on a guest-tree allow
+  stdout differs, so "byte for byte" is true of the verdict and not of the output. A session that
+  predates the hook wiring, another vendor's session, or a repo the
+  session first dirtied inside a single turn without ever being seen in it all block as before.
+  This is deliberate (`AGENTS.md` §7: do not weaken a gate to turn red green) and it is also why
+  the fix is worth little without the hook actually wired.
+- **A third process that modifies an already-dirty file *during* the session** — govsync,
+  obsidian-git, another session sharing the checkout — changes its digest, so the guard attributes
+  it to the closing session. That **over-blocks**; it never under-blocks, which is the safe
+  direction for a lost-work guard. The informational line names such paths explicitly so the
+  agent can say "that edit was not mine" instead of committing it.
+- **A session that edits an inherited dirty file and reverts it byte-for-byte** reads as
+  untouched. The tree then holds exactly what the session found, so none of the session's own
+  work is lost — the thing this check exists to prevent.
+- Paths are enumerated with `-uall`, so a file created inside an **already-untracked directory**
+  is the session's own, not inherited. Above 5000 dirty paths the snapshot is marked truncated and
+  the guard treats it as no snapshot at all (blocks).
+- A digest the snapshot could not read (`unreadable`) never compares equal to anything, including
+  itself: a path we could not read cannot clear the session of having changed it.
+- **This is a tripwire with an audit ledger, not a filesystem boundary.** The session's own
+  machine writes the snapshot, so a session that forges one defeats the attribution — the same
+  posture every other guard in this file states for itself. Gitignored files never appear in
+  `git status` and are out of scope entirely.
+- The **ancestry** half of check 1 is untouched: inherited dirt never rescues a session's own
+  unmerged or unpushed commits.
+
 **Vault exemption — the hook now matches the written rule (2026-10-07).** The Obsidian vault
 (`canonical-paths.md`, "Obsidian vault (LAW)"; `$QB_VAULT` overrides the path, as in
 `vault-guard.sh`) is exempt from check 1, exactly as the
@@ -407,7 +618,9 @@ JP: "Ceres should keep a running count of open work which hasn't been pushed" �
 into abandoned/lost work doesn't depend on any single session's closeout attempt catching it.
 
 `bin/open-work-report.sh` scans every repo listed in `governance/rules/open-work-roots.txt`
-plus every active worktree under the roots in `worktree-roots.txt`, and for each checks: any
+plus every active worktree under the roots in `worktree-roots.txt` (in practice, primary
+  checkouts only until [#118](https://github.com/FinTechGlobalSolutions/sentinel/issues/118):
+  it does not yet recognize a linked worktree), and for each checks: any
 uncommitted/staged changes, any local commits not yet on `origin/<default-branch>`, and
 whether the current branch (if not the default) is actually merged into it. Two-layer output,
 same pattern as every other report in this file:
@@ -457,6 +670,22 @@ GitHub PR (sentinel#17) — dirty-tree block, GraphQL thread-resolution query (c
 a real schema error: `PullRequestReviewThread` has no `url` field), override issue → consume
 → re-block cycle, and a real `hashlib` import bug caught by the guard's own fail-open path
 during testing (proving fail-open works, then fixed so the real check runs).
+
+**Build-time evidence for dirty-path attribution (2026-10-07):**
+`python3 tests/test_hook_closeout_guard_dirty_attribution.py` — 63/63, and 23 mismatches against
+the pre-fix hook, all of them inherited-dirt, mixed or reporting cases: every case where a
+session's own work must still block passes on both hooks — **except `i2` and `k2`, which are
+the point of the change: own work inside another session's locked worktree did not block before
+it.** The two existing suites
+(`test_hook_closeout_guard_vault.py` 28/28, `test_hook_closeout_guard_attribution.py` 69/69) pass
+unchanged, which is the no-snapshot path proving its verdict and stdout unchanged (stderr gains a
+reason line). Live runs with the real
+`gh`, the real lock registry and the real snapshot engine, in a fresh clone of this repo whose
+`HEAD` is an ancestor of `origin/main`: two untracked files created *before* the snapshot then a
+closeout → **exit 0** with both named as inherited; the same session then creating one file of its
+own → **exit 2** naming only that file, with the inherited pair still reported as not its to
+commit; a session id with no snapshot → **exit 2** with the pre-fix message; the session editing
+one of the inherited files → **exit 2**, that path reclassified as its own.
 
 ## Session ledger — SOW, naming, audit close-out (ratified 2026-10-05)
 
