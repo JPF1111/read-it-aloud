@@ -747,6 +747,52 @@ Desktop session is archived (rather than its process exiting) is UNVERIFIED — 
 list may miss such sessions until they are resumed. The audit lists what was attempted; only
 the close-time probes establish what landed.
 
+### Session status board (ratified 2026-10-09)
+
+**Sanctioned by: JP, 2026-10-09, live in chat** — sessions "go stale because they get buried";
+he wants to see at a glance whether each session is done or in progress, colour-coded to match
+Operon's statuses and priorities (priority ≠ status), titles carrying project + status +
+priority + agent app + ref # + description without the full date, sessions filed into groups and
+moved automatically, and "if there is something which works for us we should adopt it". Ruled:
+Needs Action takes red, In Progress yellow; priority shown as its letter; 15-minute reconcile.
+
+1. **Operon is the source of the taxonomy.** Statuses are the Operon pipeline *Session*;
+   priorities are Operon's S–F (default C). The sidebar shows the nearest emoji because a
+   session title cannot carry a colour:
+
+   | State | Sidebar | Operon colour | Means |
+   |---|---|---|---|
+   | `needs-action` | 🔴 | #DC2626 | JP must act: a permission, a question, a decision, a review, or `/closeout` |
+   | `in-progress` | 🟡 | #CA8A04 | an agent is working now |
+   | `waiting` | 🟣 | #9333EA | blocked outside the session: CI, PR review, another session, a third party |
+   | `planned` | 🟠 | #FF7B0F | queued, not started |
+   | `parked` | 🔵 | #1A7EBC | deliberately paused, or idle 7+ days |
+   | `finished` | ⚪ | #787878 | ledger closed (or, with no ledger, its PR merged / a routine run) |
+   | `dropped` | ⚫ | #1F1F1F | cancelled |
+
+2. **Display title:** `<state emoji> <priority> · <PROJECT> · <app> · <ref> · <description>`,
+   e.g. `🟡 S · QB · cc · QB-711 · node tsconfig typecheck`. `<ref>` (Jira key, PR #, issue) is
+   omitted when there is none. The `<client>-<YYYYMMDD>-<topic-slug>` name of rule 3 stays the
+   ledger's searchable key; the sidebar shows the display title instead. Project codes live in
+   `PROJECTS` in `bin/session-ledger.py` — extend that table, never invent codes per session.
+3. **Sidebar sections, one per state**, named `<emoji> <State>`. A session's section and title
+   are written only by the reconciler or by `/sow`, never by hand-curated pins.
+4. **Transitions are automatic.** Hooks (`session-ledger-hooks.json`): a prompt → `in-progress`;
+   `Notification` of a permission prompt or elicitation dialog → `needs-action` (it overrides a
+   hold; other notification types are ignored); `Stop` → `needs-action` unless the ledger holds
+   `waiting`/`parked`/`planned`/`dropped`; `/closeout` → `finished`. A session that is running
+   shows `in-progress` even after a `/closeout`. Priority and project come from the ledger
+   (`state --priority`); only a session without a ledger keeps hand edits made to its title. A session sets a
+   hold with `session-ledger.py state waiting --reason "<what it waits on>"`.
+   `session-ledger.py reconcile` derives every row (running, open PR, merged PR, idle days,
+   routine repeats) and emits the plan; a 15-minute scheduled task applies it through
+   `set_session_title` and `move_sessions`. The plan is computed by the script, not judged by
+   the model that applies it.
+
+**Honest limits.** Emoji approximate Operon's hex colours. The scheduled task runs only while the
+desktop app is open. Renaming a session whose title JP set by hand asks him first and is declined
+in an unattended run (app behaviour) — such rows stay as they are until he approves once.
+
 ## Session close-out — mandatory metrics report (canonical, ratified 2026-07-30)
 
 **Trigger — archival only.** This report is NOT part of routine close-out or a session going
