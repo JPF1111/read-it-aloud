@@ -90,17 +90,25 @@ shared-working-tree collision class is eliminated structurally, not by disciplin
   Either create it under a registered root, or register the new root in `worktree-roots.txt`
   (a sentinel PR) before or together with its first use.
 
-  **Known gaps, tracked in [#118](https://github.com/FinTechGlobalSolutions/sentinel/issues/118).**
-  Until #118 lands, control 2 is only partly in force:
-  - Both reports find worktrees by scanning registered roots rather than by asking git.
-  - The open-work report does not yet see linked worktrees at all. It does see uncommitted work
-    in each primary checkout it lists, Distyll and vigilum included.
+  **How control 2 finds worktrees (since #118, [issue](https://github.com/FinTechGlobalSolutions/sentinel/issues/118)).**
+  Both reports ask git, not a directory list: `git worktree list --porcelain` for every repo
+  `bin/gov-repos.sh` names (the set govsync governs) and every repo in `open-work-roots.txt`
+  (`bin/worktree_discover.py`). A worktree created in a fresh directory is covered with no roots
+  file edited, and each one is classified: unclaimed, dirty, unpushed or unmerged, prunable.
+  `worktree-roots.txt` is now only the net for directories git does NOT know (a subagent's
+  `agent-*` leftover, a worktree whose metadata was pruned): the lock report calls those
+  `ORPHAN-DIR`, "possible orphaned work, not a worktree: inspect and salvage", and gives them no
+  claim-and-remove remedy. A checkout of a repo git knows, at a path git does not list, is
+  `LISTED-ELSEWHERE`: a moved worktree (repair it from there; its old path's `PRUNABLE` says "moved",
+  never "prune") or a copy (run no git in it; salvage). Directories are compared by device and inode,
+  so a path that differs only in case is the same directory. Still open:
   - The closeout guard is no general backstop. It checks only the checkout the closing session
     is standing in, and only for repos with a remote. It does not see a subagent's worktree, any
-    other worktree, or Distyll and vigilum.
-
-  #118 changes both reports to list worktrees with `git worktree list` for every governed repo,
-  so a worktree is covered wherever it lives without anyone editing a roots file.
+    other worktree, or Distyll and vigilum. The discovery is now a reusable helper
+    (`worktree_discover.py claims <session-id>` lists the worktrees a session holds locks on);
+    wiring it into `bin/hook-closeout-guard.py` is follow-up.
+  - A claim made without `--session-id` takes `CLAUDE_CODE_SESSION_ID` from the environment; a
+    shell with neither still records an ownerless lock.
 
   Tooling must resolve a destructive command's target from its explicit operands, so a worktree
   nested inside its primary checkout is never mistaken for that checkout. A command that sweeps
@@ -344,8 +352,15 @@ gate-receipt/custos pattern as everything else in this file.
 - `bin/hook-closeout-guard.sh` (+ `.py`) — a Claude Code `PreToolUse` hook wired machine-wide
   in `~/.claude/settings.json`, matcher `mcp__ceres__agent_closeout`. Before any session's
   closeout call reaches Ceres, it checks the git repo at the hook's `cwd`:
-  1. **Merged and pushed** — `HEAD` must be an ancestor of `origin/<default-branch>`, and
-     every dirty path in the working tree that is **this session's** must be committed. The
+  1. **Merged and pushed** — the work at `HEAD` must have landed in `origin/<default-branch>`
+     (`bin/landed.py`, shared with `bin/worktree-lock-report.sh`; sentinel #114): `HEAD` is an
+     ancestor, **or** its tree equals the default branch's tree, **or** merging `HEAD` into the
+     default branch changes nothing (`git merge-tree --write-tree`: every byte `HEAD` adds is
+     already there), **or** a PR merged *into the default branch* has `headRefOid` equal to `HEAD`
+     and its merge commit is in the default branch — a squash merge is never an ancestor, and this
+     repo squash-merges. A PR merged into another branch (a stacked PR) proves nothing. If
+     `landed.py` is missing, defective or raises, the ancestor-only test decides; an answer it
+     cannot establish blocks, with a warning that says why. And every dirty path in the working tree that is **this session's** must be committed. The
      session's own uncommitted, unpushed or unmerged work blocks closeout; dirt it inherited
      does not (see *Dirty-path attribution* below).
   2. **PR thread disposition** — for PRs the closing session owns (see *Ownership* below),
@@ -436,16 +451,30 @@ gate-receipt/custos pattern as everything else in this file.
   reason), so it is visible after the fact, not prevented. Own work done inside a peer's locked
   worktree is likewise reported as the peer's; attributing a dirty tree path by path is the
   separate dirty-tree work (session `cc-20261007-closeout-guard-dirty-tree-attribution`).
-- Fails OPEN (exit 0) on any internal error (not a git repo, `gh` unauthenticated, network
-  failure) with a warning — reported to the agent as above — this is a tripwire-plus-audit
-  control, not a filesystem permission, same posture as the worktree-lock guard above.
+- Fails OPEN (exit 0) on any internal error (`gh` unauthenticated, network failure, an uncaught
+  exception, the guard process dying) with a warning — reported to the agent as above — this is
+  a tripwire-plus-audit control, not a filesystem permission, same posture as the worktree-lock
+  guard above. The SILENT allows are a cwd that is not a git repo and a repo with no origin:
+  there is nothing to check. Every other skip tells the model the check did not run (sentinel
+  #113 N3): an uncaught exception (caught in `main()`), hook input that is not JSON, a failed
+  check-1 `git status` (an empty listing from a failed status is not a clean tree), and, in the
+  wrapper, a missing guard file, a failed `mktemp` or a guard exit other than 0/2.
+- Check 1 lists untracked files whatever the repo's `status.showUntrackedFiles` says (`-uall`);
+  a session can set it to `no` on its own repo, so honouring it would hide that session's own
+  files (#113 N4). The govsync-output proof accepts only law the sentinel checkout's `HEAD`
+  holds (N1): a law commit counts only if it is an ancestor of `HEAD`, and a rule copy is compared
+  with `HEAD:<source>`, not with the working tree, since govsync copies whatever the working tree
+  holds. `HEAD` includes any unpushed local commit on that checkout. `gh repo view` runs in the
+  judged checkout, and the wrapper's scratch file is `mktemp`'d.
 
 **Dirty-path attribution — a session is blocked for its own dirt, not everyone's (2026-10-07,
 sentinel #110).** The govsync-output rule above excuses one specific, very common kind of
 inherited dirt by *proving its provenance*; this excuses the general case by *attributing it to a
 session*. **The two compose, and neither widens the other:** a dirty path blocks only when it is
 neither proven govsync output nor already dirty when this session started and byte-identical
-since. Provenance proof is the stronger of the two where it applies — it needs no prior
+since (a file over 50 MB, `MAX_HASH_BYTES`, is compared by size, mtime, device and inode instead of
+content, so an in-place edit that preserves all four goes unseen). Provenance proof is the
+stronger of the two where it applies — it needs no prior
 observation, so it also covers sessions older than the snapshot hook and other vendors' sessions
 — but it can only ever recognise govsync's own files. Everything else inherited is this rule's
 job: the untracked `Instruct_BKUP/` directory a parent session created (the 2026-09-16 failure), a
@@ -514,21 +543,28 @@ the event was never logged. Measured 2026-10-09 by parsing every
 attachment of any kind (the other 3 are `hook_non_blocking_error`, on 2026-09-18 / 2.1.267,
 2026-09-24 / 2.1.280 and 2026-09-28 / 2.1.284); **10** carry none. Where it is logged it is
 always **before** the first `tool_use` — by 3.7-290 s for the 20, or 3.5-290 s counting the error
-records. (An earlier version of this text said 8-63 s; that was the range of the 15 `ceres-c*`
-sessions alone, not of the set. The figures drift as sessions are created, so they are stated with
+records. (An earlier version of this text said 8-63 s; that does not reproduce — the `ceres-c*`
+sessions alone give 11.4-63.3 s from 14 records, per the final review of #111 — and was a subset,
+not the set. The figures drift as sessions are created, so they are stated with
 the date and the method rather than as fixed truths.)
 
 **Of the 10 with no record, 9 are one window on 2026-10-07 between 17:23 and 21:17 UTC**, all on
 2.1.289 — a build that also appears among the transcripts that *do* carry it, so this is not a
-version boundary. The tenth is an 11-line transcript (`92464979`, `CC091712-design-tracker`,
-2026-09-19). **Four transcripts before that window lack the exact `hook_success` record**, and
-naming them matters because an earlier version of this text wrongly claimed every session outside
-the window had it: `92464979`, plus the three `hook_non_blocking_error` ones above
-(`45814527`, `92d6a18b`, `890b6c29`).
+version boundary. The tenth is an 11-line metadata-only stub (`92464979`, `CC091712-design-tracker-links`,
+2026-09-19) of a session whose full transcript (`CC091812-mc-real-clerk`) carries the exact record, so
+one session was counted twice. **Three sessions before that window lack the exact `hook_success`
+record**, and naming them matters because an earlier version of this text wrongly claimed every
+session outside the window had it: the three `hook_non_blocking_error` ones above (`45814527`,
+`92d6a18b`, `890b6c29`), each of which did fire SessionStart, with an error. (This correction
+follows the final review of #111. The duplicate, the three error sessions and the 11.4-63.3 s
+range were re-measured on 2026-10-17 in the judge review of #144 and reproduce. The totals above
+are as first measured on 2026-10-09; the same glob cut at that date now gives 34/20/26/8: three
+transcripts have since gained `SessionStart:resume` records, and a 7-line transcript with no
+SessionStart record is now counted.)
 
 What this does establish: when the hook is logged it always precedes the session's first action,
 the gap is never marginal, and the unlogged window is confined to 2.1.289 on one day. What it does
-not establish is why those 10 carry nothing — hook failure and absent logging are both consistent
+not establish is why those 9 sessions carry nothing — hook failure and absent logging are both consistent
 with the data. Either way it fails safe: no snapshot means this check blocks exactly as it did
 before dirty-path attribution existed. Wiring is tracked at
 `governance/claude/tree-snapshot-hooks.json` and merged into `~/.claude/settings.json` by
@@ -557,8 +593,9 @@ surfaced rather than silently swallowed or silently adopted.
 
 **Honest limits, stated so this is not mistaken for proof of authorship:**
 - **Missing evidence never relaxes the gate.** No snapshot means the pre-2026-10-07 behaviour,
-  with identical exit codes — the stderr line naming the reason is new, and on a guest-tree allow
-  stdout differs, so "byte for byte" is true of the verdict and not of the output. A session that
+  with identical exit codes. On a block the stdout is the same and a stderr line naming the
+  reason is new; on an allow the reason also reaches the model as `additionalContext`, so "byte
+  for byte" is true of the verdict and not of the output. A session that
   predates the hook wiring, another vendor's session, or a repo the
   session first dirtied inside a single turn without ever being seen in it all block as before.
   This is deliberate (`AGENTS.md` §7: do not weaken a gate to turn red green) and it is also why
@@ -606,10 +643,22 @@ verifies via `gh pr view` that the PR is actually `MERGED` before it will produc
 it refuses outright if the PR is still open or was closed unmerged. The orchestrator's job is
 therefore not "vouch for this" but "actually merge it, then the tool confirms that for you."
 `--owner`/`--reason`/`--session-id`/`--ttl-minutes` (default 120min) are still required for
-attribution and scope, but they no longer stand in for verification. The guard consumes the
-override exactly once (a second closeout attempt on the same session re-blocks), and logs
-consumption — who authorized it, why, which PR was confirmed merged, and that it was actually
-used — not just that it was issued. `closeout-override.sh status` lists
+attribution and scope, but they no longer stand in for verification. The guard spends the override
+when it lets a blocked closeout through, recording the tool call's `tool_use_id`, so one override buys
+one closeout attempt; the read-check-write runs under a file lock, so of two concurrent calls only one
+can spend it. A PostToolUseFailure hook
+(`hook-closeout-guard.py refund`, wired from `governance/claude/closeout-guard-hooks.json` by
+`bin/install-claude-surfaces.sh`) gives it back only when that very call failed because Ceres
+refused the closeout before closing the session (`MaintenanceCloseoutError`,
+`MaintenanceHoldError`, `INVALID_SESSION`; never `SessionAlreadyClosedError`, never an interrupt,
+never after expiry, at most 3 times), so the retry with a corrected status does not need a second
+override (sentinel #133). Any signal that is missing or unreadable leaves it spent: the worst case is
+a second override, never a reused one. Each consumption and refund is a line in the ledger
+`logs/closeout-overrides/overrides.jsonl` — who authorized it, why, which PR was confirmed merged,
+and that it was actually used — not just that it was issued; the refund hook's decisions are in
+`refund-hook.jsonl`. The session's `latest-<session>.json` is the authoritative state: a refund is
+recorded in the ledger before it is applied, so a failure between the two leaves a `refunded` line
+for an override that is still spent. `closeout-override.sh status` lists
 issued/consumed/expired overrides for audit.
 
 ## Open-work tracker — running count of unpushed/unmerged state (ratified 2026-08-26)
@@ -617,12 +666,14 @@ issued/consumed/expired overrides for audit.
 JP: "Ceres should keep a running count of open work which hasn't been pushed" — so visibility
 into abandoned/lost work doesn't depend on any single session's closeout attempt catching it.
 
-`bin/open-work-report.sh` scans every repo listed in `governance/rules/open-work-roots.txt`
-plus every active worktree under the roots in `worktree-roots.txt` (in practice, primary
-  checkouts only until [#118](https://github.com/FinTechGlobalSolutions/sentinel/issues/118):
-  it does not yet recognize a linked worktree), and for each checks: any
-uncommitted/staged changes, any local commits not yet on `origin/<default-branch>`, and
-whether the current branch (if not the default) is actually merged into it. Two-layer output,
+`bin/open-work-report.sh` scans every repo listed in `governance/rules/open-work-roots.txt` and
+every repo govsync governs, and every worktree git lists for them (`git worktree list`, wherever
+the tree lives; [#118](https://github.com/FinTechGlobalSolutions/sentinel/issues/118)). For each
+it checks: any uncommitted/staged changes, any local commits not yet on a remote, and whether the
+current branch (if not the default) is actually merged into `origin/<default-branch>`. A repo with
+no remote (Distyll, vigilum) is compared with its local default branch instead, and each branch
+never merged into it is reported. A directory under a `worktree-roots.txt` root that git does not
+know is reported as possible orphaned work. Two-layer output,
 same pattern as every other report in this file:
 1. A dated local file, `logs/open-work/report-<date>.md`.
 2. A forced `ceres queue submit` record (type `open_work_snapshot`) — counts and per-repo
@@ -642,12 +693,16 @@ requires — a worktree branch `chore/governance-sync-<commit>`, an explicit-pat
 generated files only, a PR, squash auto-merge on green, then the primary checkout is
 fast-forwarded and the worktree removed (fast-forward for repos with no remote; the two
 `JPF1111` repos are pushed under that identity and the CLI is switched back). `sentinel-service`
-runs it after every `govsync --apply` that wrote anything and reports `landed` / `land_failed`
-in `logs/service/governance-status.json`. First live run: 29 repos in one pass.
+runs it after every `govsync --apply` that wrote anything **and whenever any governed repo holds
+a govsync mirror that is correct on disk but uncommitted** (since 2026-10-17, sentinel#135 — an
+out-of-band `govsync --apply` had left 31 repos in that state for 36h while the service read
+healthy), and reports `landed` / `land_failed` in `logs/service/governance-status.json`. First
+live run: 29 repos in one pass.
 
 **Where to look when a repo did not land (since 2026-10-07).** `governance-status.json` is one
 overwritten cycle and names only the current failures (`land_failed_repos`); the durable record
-is `logs/service/governance-sync-history.jsonl` — one JSON line per cycle carrying the trigger,
+is `logs/service/governance-sync-history.jsonl` — one JSON line per cycle (and one per out-of-band
+`govsync --apply` that wrote something) carrying the trigger,
 the sentinel commit, each repo's outcome and the reason it failed or was exempt, and the cycles
 that never started because the lock was held. The raw per-cycle output lives beside it in
 `logs/service/governance-sync-runs/`. Both are bounded (400 cycles / 40 raw runs per kind), so
@@ -655,6 +710,24 @@ neither is an unbounded write under AGENTS.md §4. Before this, the `.out` files
 at the start of each run and `launchd.out` stamped lines with the time but no date, so a failed
 landing stopped being diagnosable once the next cycle began — which is exactly what defeated the
 2026-10-07 question about the-archives' unlanded 2026-10-04 mirror.
+
+An uncommitted mirror is a finding, not an in-sync repo (since 2026-10-17). `govcheck --all
+--report-uncommitted` prints an `UNCOMMITTED` row for a non-exempt repo whose generated `AGENTS.md`
+or `.sentinel/governance` is modified or untracked; it is not drift and does not change govcheck's
+exit code. The service runs that and, when any repo is uncommitted, runs govland (which walks every
+governed repo with a dirty governance path, not only those), then re-checks: whatever is still
+uncommitted keeps `status` at `drift` and is named in `uncommitted` / `uncommitted_repos` and in the
+history line's `uncommitted` object. A repo whose primary checkout govland could not fast-forward
+after landing (govland prints `primary not fast-forwarded:` with git's reason; a PR still waiting on
+its checks never causes that) also keeps `status` at `drift`, named in `primary_stuck_repos` in the
+status file and the history line: it needs a person. The post-landing govcheck is kept in
+`governance-sync-govcheck-after.out` and archived per run as `postcheck-*.out`. A `govsync --apply` run outside the service leaves its own
+history line (`outcome: "out-of-band-write"`, with the invoker), so it is distinguishable from a
+service cycle instead of simply absent. **Limits:** govland visits every primary with any dirty
+governance path, and `CLAUDE.md` is one of them, so an uncommitted hand edit to `CLAUDE.md` alone is
+enough for govland to visit that repo and revert the edit; the retry adds such passes (sentinel#152). The out-of-band line is
+appended without the service's lock and can be lost if it lands during the service's trim of the
+history file (only once the file exceeds 400 lines).
 
 **Honest limits, stated so this isn't mistaken for airtight:** PR ownership is decided by the
 worktree-lock registry, not by gh (which has no session concept) — see *Ownership* in the
@@ -678,8 +751,9 @@ session's own work must still block passes on both hooks — **except `i2` and `
 the point of the change: own work inside another session's locked worktree did not block before
 it.** The two existing suites
 (`test_hook_closeout_guard_vault.py` 28/28, `test_hook_closeout_guard_attribution.py` 69/69) pass
-unchanged, which is the no-snapshot path proving its verdict and stdout unchanged (stderr gains a
-reason line). Live runs with the real
+unchanged, which is the no-snapshot path proving its verdict and exit code unchanged (on a block
+its stdout too, with one added stderr line; on an allow the reason also reaches
+`additionalContext`). Live runs with the real
 `gh`, the real lock registry and the real snapshot engine, in a fresh clone of this repo whose
 `HEAD` is an ancestor of `origin/main`: two untracked files created *before* the snapshot then a
 closeout → **exit 0** with both named as inherited; the same session then creating one file of its
@@ -722,14 +796,15 @@ Full operator documentation: `docs/session-ledger.md`. Engine: `bin/session-ledg
    `/sow` renames the session itself where the client allows it (Desktop:
    `set_session_title self`); elsewhere the session tells JP the name to set. This is separate
    from, and does not change, the worktree `<AGENT-CODE><MMDDYY>-` convention above.
-4. **`/closeout` is the one audit command, runnable any time, scoped to this session only.** It
+4. **`/closeout` is the one audit command, runnable any time — by the session itself or by JP —
+   scoped to this session only.** It
    inventories the session's own transcript (`session-ledger.py audit` — every request including
    mid-turn messages and anything compaction hid, files written, commit/PR commands, spin-offs),
    classifies each request DONE / OPEN / SPUN-OFF / DROPPED with a probe run at close time
    (§9e), writes the close-out note to the vault folder `Session Closeouts/` (append-or-replace
    one named file, through `vault-guard.sh`), closes the ledger, and records the Ceres receipt.
-   Every OPEN item is offered as a spun-off session — never left only in chat. It is
-   non-terminal. `/closeout archive` runs it and then the archival report below.
+   Every OPEN item is recorded (`spin`, the open-items handoff, the vault note) — never left only
+   in chat. It is non-terminal. `/closeout archive` runs it and then the close-out report below.
 5. **Safety net.** Hooks wired machine-wide from `governance/claude/session-ledger-hooks.json`
    by `bin/install-claude-surfaces.sh`: `UserPromptSubmit` re-injects the SOW and the scope rule
    every turn (or nudges once when no ledger exists); `PreCompact` logs a snapshot; `SessionStart`
@@ -740,9 +815,51 @@ Full operator documentation: `docs/session-ledger.md`. Engine: `bin/session-ledg
 6. **The vault note is the record, not the tracker.** Jira, Project Desk and Ceres records may
    point at it; none replaces it.
 
+**Sessions close themselves out (ratified 2026-10-11).** **Sanctioned by: JP, 2026-10-11, live in
+chat** (session `cc-20261010-cockpit-capture-backlog-register-write`): "[also] remove the
+restriction thats says only i can closeout i never asked for that", then "[with that note] I want
+all sessions closed   out and labeled as such once all their deliverables are completed and
+validated. Any remaining work or work needing performed needs to be recorded. Master closeout
+reports to be completed on everyting too." The rule is JP's. The wording below, and each reading
+marked *(chair's reading)*, are the Strategist chair's (delegated).
+- `/closeout` is model-invocable. Nothing reserves it for JP; the skill no longer carries
+  `disable-model-invocation`.
+- **When a session closes** *(chair's reading: "deliverables" are the SOW's acceptance items)*:
+  every acceptance item is DONE with a close-time probe (§9e) — where they apply, PRs merged with
+  CI completed/success, versions tagged, worktrees removed — and every other request is DONE,
+  SPUN-OFF (recorded with `session-ledger.py spin`) or DROPPED (the turn quoted); nothing OPEN
+  belongs to the SOW. The session then runs `/closeout archive` itself, without waiting to be
+  asked, from a checkout of the repo the work landed in, so the closeout guard checks the right
+  repo (its pull-only primary usually works; unrelated dirt there without a session-start snapshot
+  can block).
+  Its ledger closes and the status board labels it `finished`, within the board limits below.
+- **Remaining work is recorded, never left in chat.** The durable record of each item is the
+  open-items handoff, the vault note, and `session-ledger.py spin --title …`. A session card is a
+  convenience on top: in the desktop app, `start_session` with `own_initiative` for a follow-up the
+  session found, or `offer` for a JP request while JP is present. A session with nothing open says
+  so in the handoff.
+- **Master close-out report** *(chair's reading: JP's term is not defined elsewhere in law)*: the
+  Session Metrics Report below, with its vault statistics note and open-items handoff. It is
+  completed at every `/closeout archive` — a session closing on finished work, or one JP retires
+  (or a backlog sweep he ordered closes) with its remainder recorded — not only when JP archives a
+  session by hand. A session never retires itself to skip validation. Whether JP also means
+  a cross-session roll-up, like `~/dev/closeouts/MASTER-TRACKER_v2.md`, was put to him as an open
+  question on 2026-10-11.
+- A SOW deliverable not yet validated means the session does not close. It finishes the work,
+  hands it off, or records what is outstanding (`session-ledger.py state waiting --reason …` when
+  it waits on something outside the session).
+
 **Honest limits.** The hooks bind Claude Code only; Codex, claude.ai and Cowork follow this rule
-normatively and are named by hand. The scope reminder is advisory text — the model judges what
-is in scope; nothing blocks an off-SOW edit mechanically. Whether `SessionEnd` fires when a
+normatively and are named by hand. Nothing forces a session to close itself out: that is a norm,
+and `session-ledger.py list --status unclosed` stays the backstop list. The `finished` label is a
+desktop sidebar title: the reconciler updates it only while the app is open, and the title persists
+after. Terminal CLI sessions carry the ledger's and the vault note's `status:`; Codex and claude.ai
+have neither hooks nor a ledger. A prompt after a close-out does not reopen the ledger, and
+`SessionEnd` then lists it `unclosed` while the board keeps it `finished`. `close` sets `finished`
+even when SOW items remain (a retired session); until the engine follow-up proposed 2026-10-11, the
+vault note's `status: open-items-remain` and the Ceres `blocked` receipt carry the truth. The
+closeout guard checks one repo per close-out: the one the session closes from. The scope reminder is advisory text — the model judges what is in scope; nothing
+blocks an off-SOW edit mechanically. Whether `SessionEnd` fires when a
 Desktop session is archived (rather than its process exiting) is UNVERIFIED — the `unclosed`
 list may miss such sessions until they are resumed. The audit lists what was attempted; only
 the close-time probes establish what landed.
@@ -762,7 +879,7 @@ Needs Action takes red, In Progress yellow; priority shown as its letter; 15-min
 
    | State | Sidebar | Operon colour | Means |
    |---|---|---|---|
-   | `needs-action` | 🔴 | #DC2626 | JP must act: a permission, a question, a decision, a review, or `/closeout` |
+   | `needs-action` | 🔴 | #DC2626 | JP must act: a permission, a question, a decision, a review — or a stopped session that finished its acceptance without closing itself out: resume it so it runs `/closeout archive` |
    | `in-progress` | 🟡 | #CA8A04 | an agent is working now |
    | `waiting` | 🟣 | #9333EA | blocked outside the session: CI, PR review, another session, a third party |
    | `planned` | 🟠 | #FF7B0F | queued, not started |
@@ -775,13 +892,20 @@ Needs Action takes red, In Progress yellow; priority shown as its letter; 15-min
    omitted when there is none. The `<client>-<YYYYMMDD>-<topic-slug>` name of rule 3 stays the
    ledger's searchable key; the sidebar shows the display title instead. Project codes live in
    `PROJECTS` in `bin/session-ledger.py` — extend that table, never invent codes per session.
+   **Reading a title:** the [Session Label Key](https://claude.ai/artifact/KWcVJeGiYpNEaWBqcAR7Kz)
+   (a private artifact; its source is [`docs/session-label-key.html`](../../docs/session-label-key.html))
+   decodes every part, including Operon's definition of each priority letter. Those definitions
+   live in Operon's settings in the vault (`.obsidian/plugins/operon/data.json`,
+   `taxonomy.priorities`); the key copies them and is not their source.
 3. **Sidebar sections, one per state**, named `<emoji> <State>`. A session's section and title
    are written only by the reconciler or by `/sow`, never by hand-curated pins.
 4. **Transitions are automatic.** Hooks (`session-ledger-hooks.json`): a prompt → `in-progress`;
    `Notification` of a permission prompt or elicitation dialog → `needs-action` (it overrides a
    hold; other notification types are ignored); `Stop` → `needs-action` unless the ledger holds
-   `waiting`/`parked`/`planned`/`dropped`; `/closeout` → `finished`. A session that is running
-   shows `in-progress` even after a `/closeout`. Priority and project come from the ledger
+   `waiting`/`parked`/`planned`/`dropped`; `/closeout` → `finished`. Under the live applier
+   (`reconcile --from-app`) app rows carry no running flag and a closed ledger's hooks skip the
+   state flip, so a session that takes more prompts after its close-out stays `finished` (engine
+   follow-up proposed 2026-10-11). Priority and project come from the ledger
    (`state --priority`); only a session without a ledger keeps hand edits made to its title. A session sets a
    hold with `session-ledger.py state waiting --reason "<what it waits on>"`.
    `session-ledger.py reconcile` derives every row (running, open PR, merged PR, idle days,
@@ -793,17 +917,56 @@ Needs Action takes red, In Progress yellow; priority shown as its letter; 15-min
 desktop app is open. Renaming a session whose title JP set by hand asks him first and is declined
 in an unattended run (app behaviour) — such rows stay as they are until he approves once.
 
+**Nested side sessions share their root's section (2026-10-18).** **Ruled by JP, 2026-10-18, live in
+chat** (session `cc-20261017-ceres-381-sanction-status-fix`, read from its transcript): "well then
+technically the root session shouldnt be in the finished as well considering this spawn still has
+work to to." The rule: a root is never filed under ⚪ Finished while any session nested under it, at
+any depth, still has open work; it files under the most urgent state among itself and its live
+nested descendants, in the table's order (Needs Action first). The app files a side session under
+the session that started it, at every depth (sessions three levels below a root were live on
+2026-10-18), and `move_sessions` refuses to move it alone ("nested sessions move with their parent.
+Nothing was moved"; the refusal names the top of the chain, the root). So a family shows in one
+section, which is how the rule is applied: the reconciler moves only roots, and a finished root with
+a needs-action child is moved to 🔴 Needs Action. The reconciler also follows a chain through an
+archived session: a live session reached that way counts toward the live top of its chain, and a
+family whose top is archived is not moved. The app keeps nesting through an archived session: when
+the reconciler moved `local_6f2828bc` to 🔴 Needs Action after 1.7.39 reached the primary checkout
+(2026-10-18, 10:05Z), all six live sessions it reaches through archived parents moved with it
+(`get_session`, read after the move). Titles stay per session, so that root keeps its ⚪ title
+*(chair's reading: JP's words concern the section; the title still says the root's own work is
+done)*. Within what the board can move, no nested session is filed under a section less urgent than
+its own state. The plan reports as blocked, with the root named, each nested session that will not
+show in its own section: one less urgent than its family (a finished child of a needs-action root),
+and every session of a family whose root is archived or a routine run, which the board cannot move
+at all, so they stay wherever that root was filed. Only detaching puts such a session in its own
+section: "Detach to top level" in the sidebar (JP), or `detach_session`, which acts only on a
+session the calling session started and the user has not moved, or on `self` when another session's
+Claude started it, and refuses forks, task chips and a side session that shares another session's
+worktree (its tool description, 2026-10-18). The 15-minute task started none of them and runs
+unattended, where the tool is unavailable, so it never detaches. A detached session (`detached:
+true`) is filed on its own. A fork the app files record only as `forkedFromSessionId` is treated as
+top level. That is a disclosed risk, not a finding: on 2026-10-10 the app refused moves of three
+such forks as nested while the top of their chain was live, and `get_session` does not report fork
+nesting; one of them, `local_7ed717df`, has since been moved into its own group. No fork of a live
+chain was live on 2026-10-18. A refused move is dropped by the applier and tried again on the next
+run, and the fork's state is not rolled up to its root. Moving a pinned session into a group unpins
+it (the tool's description); the board moves a root whether or not it is pinned, as it did before
+this rule. `reconcile --sessions` reads nesting from `get_session`'s `parentSessionId`/`detached`,
+or from `list_sessions`' `startedBy`, which appears on linked sessions only (side sessions Claude
+started and linked forks; not on sessions spawned from a task without `sideSession`, plain forks or
+detached sessions); `--from-app` reads it from the app's files.
+
 ## Session close-out — mandatory metrics report (canonical, ratified 2026-07-30)
 
-**Trigger — archival only.** This report is NOT part of routine close-out or a session going
-idle. It fires ONLY when JP issues the explicit close-out command for a session — the command
-that means the session is being **abandoned and archived**: no further messages, never used
-again. When that command is given, the Session Metrics Report is the session's **final act**
-before it goes dark. A session that is merely paused, waiting, or between slices does NOT
-produce this report — only the one being retired. The Strategist requests it as the last
-thing asked of that session; the session answers, and is then abandoned. The non-terminal audit
-close-out (`/closeout`, § Session ledger above) is separate and may run at any time;
-`/closeout archive` runs it first, then this report.
+**Trigger — every `/closeout archive` (JP, 2026-10-11; the reading is the chair's).** This report
+runs at every `/closeout archive`: a session closing on completed, validated work, run by the
+session itself without being asked or typed by JP, or a session being retired with its remainder
+recorded (§ Session ledger, "Sessions close themselves out"). It is the session's **final act**
+before it goes dark. A session that is merely
+paused, waiting, or between slices does NOT produce this report; the non-terminal audit
+(`/closeout`, § Session ledger above) may run at any time. `/closeout archive` runs that audit
+first, then this report. Until 2026-10-11 this report fired only when JP issued the archive command
+himself; JP ruled he never asked to be the only one who could close a session out.
 
 Non-negotiable rule for every number in it: label each as **VERIFIED** (checked against
 git/disk at report time) or **ESTIMATED** (reconstructed from conversation, could be off).

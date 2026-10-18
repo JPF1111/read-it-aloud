@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      e5ff5e2
-     body-sha256: aac5be9245e6cb48be65466feaa872740973f2b94af4a8ac52e1e1edcf8b18a6
+     commit:      9a0ce41
+     body-sha256: 2d46e1601e1f08dcd8ecea61e8f3297b6fc86f5ee7961972e995b36d4f6ac343
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-10-17T13:53:44Z
+     generated:   2026-10-18T13:55:37Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve the rule files it routes to against companion-rules above.
@@ -57,6 +57,7 @@ real path + SHA-256 you read in the work's progress artifact:
 | read/write Project Desk or Jira · pick up queued work | `project-desk.md` (`/gov-trackers`); desk block lives in the repo's `PROJECT_DESK.md`, never `AGENTS.md` |
 | any AWS CLI/console/MCP action | `aws-agent-toolkit.md` — profile pinning, region caveat, secrets handling |
 | install/review a Claude Code skill · a skill invocation gets blocked | `skillspector-and-skill-gate.md` — approval ledger, `PreToolUse` gate, troubleshooting |
+| any GitHits CLI/MCP use · `TERMS_ACCEPTANCE_REQUIRED` · a `<!-- githits -->` block appears | `githits.md` — agents never accept GitHits terms (§5); routing; drift removal |
 | work in any repo | that repo's `CLAUDE.md` (repo canon; defers to this file) |
 
 In a repo listed in `~/dev/sentinel/governance/rules/gate-governed-repos.txt`, read **all** five required rule
@@ -84,7 +85,8 @@ second-order effects unasked. **Tell JP when a plan has a hole** — he prefers 
 
 Ceres instructions/install/config/reference docs are authoritative only when verified for the
 installed version or in that version's build-validated docs manifest. Current label:
-**Ceres Sentinel Memory OS v0.5.1** (D-189; supersedes D-116). Missing/mismatched version
+**Ceres Sentinel Memory OS v0.5** (D-251; supersedes D-189). The label names the minor
+release line; per-patch agreement is the release gate's job. Missing/mismatched version
 metadata → **UNVERIFIED / NON-AUTHORITATIVE**: don't follow until validated against the
 installed runtime; don't call it wrong without evidence. Package metadata is the version
 source of truth; docs and artifacts derive from or are checked against it; the release gate
