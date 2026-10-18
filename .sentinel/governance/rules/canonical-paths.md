@@ -44,10 +44,15 @@ and got it wrong twice on 2026-08-31 before JP corrected it by hand.
 Both repos and the workspace file live in that one directory; the earlier sibling locations
 (`~/dev/code/mylo-documentation-hub`, `~/dev/code/legacy-systems-research`) no longer exist
 on disk — verified 2026-09-23 — and are listed under DEAD PATHS below. The Ceres side of the
-same correction is a `codex-desktop` proposal (`MYLO canonical local path correction`, queue
+same correction was a `codex-desktop` proposal (`MYLO canonical local path correction`, queue
 `472295e8-28f1-4174-badc-43ad87ef01a1`, proposal `c39b3a29-fba3-4a7b-87f0-bc8bfb3d92d1`,
-namespace `mylo`, target `ceres://mylo/project-spine`) that lands through owner ratification,
-not through this file.
+namespace `mylo`, target `ceres://mylo/project-spine`), which JP ratified on 2026-09-23 but the
+queue drain then rejected (`ObsidianKeeperError`: a `ceres://…/project-spine` target is not a
+Markdown note; [sentinel-memory-os#191](https://github.com/FinTechGlobalSolutions/sentinel-memory-os/issues/191)).
+The envelope is sealed in Ceres's `rejected-archive/2026-Q3` and must not be replayed. Its intent
+landed on 2026-09-24 by another route: the project spine, as mylo decision item
+`canonical-local-workspace` (Ceres project-spine item `b2284a43-ed49-4dd0-a42e-a7a0e6f0c964`, with
+`origin_queue_id` 472295e8 in its metadata; a Ceres record, with no web link).
 
 **`legacy-systems-research` IS a MYLO repo** despite the name — it is the clean-room
 research hub for legacy health plan platforms (QNXT and adjacent payer systems). Its
