@@ -2,10 +2,10 @@
      Standing law for every AI agent working in this repository.
 
      source:      github.com/FinTechGlobalSolutions/sentinel :: governance/AGENTS.md
-     commit:      9a0ce41
-     body-sha256: 2d46e1601e1f08dcd8ecea61e8f3297b6fc86f5ee7961972e995b36d4f6ac343
+     commit:      813641b
+     body-sha256: a0cc663f8e09810f1fc8cad47b0d62ddd1f8608e2eda88f3fd31b37ba095a505
      companion-rules: .sentinel/governance/rules/
-     generated:   2026-10-18T13:55:37Z
+     generated:   2026-10-19T15:09:33Z
 
      Edit the master, never this copy. Regenerate with:  sentinel/bin/govsync --apply
      For the Section 0 ingestion gate, resolve the rule files it routes to against companion-rules above.
@@ -58,6 +58,7 @@ real path + SHA-256 you read in the work's progress artifact:
 | any AWS CLI/console/MCP action | `aws-agent-toolkit.md` — profile pinning, region caveat, secrets handling |
 | install/review a Claude Code skill · a skill invocation gets blocked | `skillspector-and-skill-gate.md` — approval ledger, `PreToolUse` gate, troubleshooting |
 | any GitHits CLI/MCP use · `TERMS_ACCEPTANCE_REQUIRED` · a `<!-- githits -->` block appears | `githits.md` — agents never accept GitHits terms (§5); routing; drift removal |
+| start or run a major work effort (MWDs, slices, epics, projects, campaigns; rule §1) · JP asks for a "dashboard" in any request | `effort-command-center.md` — mandatory interactive command center: built at start, kept current, finalized at close-out; own Specula page; decisions via the Decision Desk; "dashboard" means this full standard (§10) |
 | work in any repo | that repo's `CLAUDE.md` (repo canon; defers to this file) |
 
 In a repo listed in `~/dev/sentinel/governance/rules/gate-governed-repos.txt`, read **all** five required rule
@@ -174,8 +175,12 @@ purpose is a button-press is theater. This is a **norm, not a mechanical control
 hook checks authorization, and a self-written `PUSH-APPROVED` token is theater. Believe a guard
 stopped you? Name it and quote its output; if you can't, you weren't gated.
 
-Still escalate real irreversibility: history rewrite, force-push, branch/tag deletion, secret
-rotation, production data, DNS.
+Still escalate real irreversibility: history rewrite, force-push, tag deletion, deleting an
+unmerged branch, secret rotation, production data, DNS. Merging in-SOW work and deleting its
+branch after the merge are not escalated (`git-workflow.md`, auto-merge ruling). A repo ruleset
+or CODEOWNERS rule that requires JP's review (sentinel since 2026-10-19) is a gate JP chose, not
+an escalation: request his review, report "awaiting the ruleset's code-owner review", merge as
+soon as it lands, and never bypass it.
 
 ---
 

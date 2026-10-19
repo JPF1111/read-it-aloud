@@ -47,8 +47,12 @@ by this rule, now and for every future repo unless explicitly exempted the way t
 - **Session/task end-state is always clean:** `git status` clean, no stray local branches
   beyond the one currently in flight, no local worktrees for finished work, no open PRs
   left without either a merge or a stated reason for staying open (e.g. genuinely blocked
-  and escalated). This is not a one-time cleanup — it is the default condition a repo
-  should be in after every session that touches it.
+  and escalated — never "awaiting JP's merge approval" for in-SOW work; see the auto-merge
+  ruling under Push / PR). A repo ruleset or CODEOWNERS rule that requires JP's review
+  (sentinel since 2026-10-19, CHG-2026-10-18-005) is a gate JP chose, not an escalation: such a
+  PR is reported as "awaiting the ruleset's code-owner review" and merged as soon as it lands
+  (see the auto-merge ruling's limits). This is not a one-time cleanup — it is the default
+  condition a repo should be in after every session that touches it.
 - **This does not relax §5 (money/legal/member-rights) or the push-authority rules below.**
   A PR still needs verified-green gates before merge; "keep it clean" is never grounds to
   merge something that hasn't actually passed.
@@ -1063,39 +1067,65 @@ means nothing is owed in either direction.
 ## Push / PR
 - Never `git push --force` to a shared branch. Use `--force-with-lease` only on your
   own feature branch, and only after stating why.
-- **Push authority (updated 2026-07-13; scope corrected 2026-08-16 — read this correction,
-  not just the original text below):** The Strategist-chair gate exists to stop an
+- **Push authority (updated 2026-07-13; scope corrected 2026-08-16; merge authority settled
+  2026-10-16 — the auto-merge ruling below governs where older wording differs):** The
+  Strategist-chair gate exists to stop an
   **autonomous multi-agent campaign** (Workflow-spawned agents, background Agent-tool
   fan-outs, orchestrated swarms running without JP present in the loop) from self-merging
   to `main` unsupervised — that was the entire original problem it was built to solve.
   It was never meant to apply to a **single CODE session that JP is directly, interactively
-  driving in the same live conversation.** In that case JP himself is the Strategist chair
-  for that session — there is no separate approval channel to route to, and routing to one
-  anyway just adds a step that accomplishes nothing except sitting on finished, gate-verified
-  work. Concretely:
-  - **Autonomous/multi-agent campaigns:** the original rule stands unchanged. No agent may
-    self-authorize a push/merge to `main`, even under a stale or general prior instruction.
-    Verify gates, present the report, wait for explicit Strategist-chair review of *that*
-    push before it happens.
-  - **A single interactive CODE session with JP live in the conversation:** once JP has
-    given an explicit, current-turn instruction to push or merge a *specific* piece of work
-    (not a standing/ambient permission from an earlier session), the session may proceed —
-    push feature branches, and merge PRs via `gh pr merge` — after verifying gates are
-    actually green (typecheck clean · tests green, no regression · scanners pass ·
-    review threads resolved · CI green). **Verify, then act. Do not manufacture a second
-    approval step JP already gave in this turn.**
-  - **Auto-merge on green gates — standing policy (ratified 2026-08-25):** for a PR the
-    session itself opened during a live interactive session, once every gate is verified
-    green (tests, lint, type-check, CI, review threads resolved, and any repo-specific
-    gates — version-manifest/documentation-completeness verify for `sentinel-memory-os`,
-    the analogous checks elsewhere), **merge it without waiting for a fresh per-PR
-    instruction.** JP does not need to re-approve a PR whose gates the session already
-    verified — that repeats work JP delegated by starting the session at all. This does
-    not touch the escalation list below (still real irreversibility only), does not extend
-    to autonomous/multi-agent campaigns (unchanged, still requires explicit review), and
-    does not relax "verify gates are ACTUALLY green" — a session that merges on a
-    misread or partial CI result has violated this policy, not exercised it.
-  - **Why this correction exists:** the original wording ("do not ask JP — present the
+  driving in the same live conversation**, and it is not a JP approval step. Concretely:
+  - **Autonomous/multi-agent campaigns:** no worker self-merges to `main` unsupervised. The
+    campaign's orchestrator is its Strategist chair: it runs the judge-tier review of each
+    worker's PR and merges it under the auto-merge ruling below. "Strategist-chair review"
+    means that orchestrator review, never a wait for JP.
+  - **A single CODE session:** the session's statement of work (`/sow`, Session ledger above)
+    is the instruction to merge what it delivers. No per-PR or current-turn instruction from JP
+    is needed. **Verify, then act. Do not manufacture a second approval step.**
+  - **Auto-merge — every in-SOW delivery is merged (Sanctioned by: JP, 2026-10-16,
+    CHG-2026-10-19-001; extends the 2026-08-25 auto-merge-on-green policy and JP's 2026-10-11
+    "... stop asking me for approval to merge shit" (session `5c25bcec`, 2026-10-11T16:32Z)):**
+    "NO DELIVERY WILL BE LEFT UNMERGED EVER. I DO
+    NOT NEED TO APPROVE A MERGE IF IT WAS APART OF THE SOW. ALL ISSUES RESOLVED AND FIXED
+    AUTOMATICALLY, AUTO MERGE WHEN DONE, AND DELETE BRANCH"
+    - **Who merges:** the session that delivered the work, or its orchestrator, as soon as
+      the gates are green. JP never approves these merges (a review gate he set on the repo is
+      the one exception; see the last limit below). No in-SOW delivery is left open,
+      parked, or reported as "green, awaiting merge".
+    - **Gates, on the exact head being merged:** CI `status: completed` +
+      `conclusion: success` wherever the repo runs CI (a repo with no PR checks says so in
+      the PR and runs its local tests instead of claiming green); a judge-tier review (§9f)
+      recorded on the PR; every review thread resolved; repo-specific gates (version
+      manifest, documentation completeness, and the like); `main` re-fetched immediately
+      before the merge, which uses `--match-head-commit`. Merging on a misread or partial
+      gate result violates this rule; it does not exercise it.
+    - **Findings and conflicts are the session's to fix:** judge findings, reviewer threads,
+      merge conflicts, a VERSION or CHG id that `main` already took (renumber upward). Fix,
+      re-verify, merge. None of these is a reason to hand the merge back.
+    - **After the merge, delete the branch:** `gh pr merge --squash --delete-branch`, or
+      delete the ref, then remove the worktree per the Clean-state rule above. This ruling
+      sanctions deleting a merged branch; it is not escalated. Where the repo has GitHub's
+      "automatically delete head branches" on (`gh api repos/<owner>/<repo> --jq
+      .delete_branch_on_merge`; true on `sentinel` and `sentinel-memory-os` on 2026-10-19), the
+      remote ref is already gone after the merge; the local branch and worktree still need
+      removing.
+    - **A tool or classifier refuses the merge** (for example Claude Code auto mode's "Merge
+      Without Review"): fix what it objects to, for example by posting the judge verdict on
+      the PR (`gh pr review --comment`, since a shared GitHub identity cannot approve its own
+      PR), then merge; or have the orchestrator merge under this ruling. Never park the merge
+      on JP.
+    - **Limits that still bind:** §5 (money movement, legal commitments, member/owner rights)
+      still needs JP. This ruling covers merging delivered work, not deciding those
+      questions. Work outside the SOW is spun off (Session ledger), not merged under this
+      ruling. The escalation list and the owned-repo rule below are unchanged.
+    - **A review gate JP chose is not an escalation.** A repo ruleset or CODEOWNERS rule that
+      requires JP's review (sentinel since 2026-10-19, CHG-2026-10-18-005: CODEOWNERS `*
+      @JPF1111` and the ruleset `sentinel-review-required`, which requires code-owner review and
+      last-push approval) is a gate JP chose, not an escalation. Request his review, report the
+      PR as "awaiting the ruleset's code-owner review", and merge as soon as it lands. Never
+      bypass it, including through a bypass integration. "Never park on JP" forbids asking for a
+      discretionary approval the SOW already gave.
+  - **Why the 2026-08-16 correction exists:** the original wording ("do not ask JP — present the
     report to the Strategist chair") was written with only the multi-agent case in mind, but
     read literally it also blocked the single-session case — and did, causing real harm: a
     2026-08-16 audit found genuine, never-recovered work sitting in this exact gap (an
@@ -1105,7 +1135,9 @@ means nothing is owed in either direction.
     the incident record.
   - Still escalate real irreversibility regardless of session type — see below.
 - **Still escalate to JP (real irreversibility, not ceremony):** history rewrite, force-push
-  to `main`, branch/tag deletion, secret rotation, anything touching production data or DNS.
+  to `main`, tag deletion, deleting a branch that has not merged, secret rotation, anything
+  touching production data or DNS. Deleting a branch after its PR merged is not escalated (auto-merge
+  ruling above).
 - **Never push to a repo JP does not own. (Ruled by JP, 2026-09-28: "NEVER push to any repo which I
   do not own.")** Owned means a remote on one of the GitHub accounts in
   `bin/gov-owned-accounts.txt` (`FinTechGlobalSolutions`, `JPF1111`, `QuorumBooks`), and every push URL
