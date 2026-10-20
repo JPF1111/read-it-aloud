@@ -343,6 +343,88 @@ exit 0; foreign `release` refused; `takeover` attributed), and the report's firs
 found real drift — both then-existing QB worktrees (`CC082226-quorumbooks-app-pd-pointer`,
 `CC082526-qb10-ws6-templates`) running unregistered.
 
+## Worktree gate — a worktree exists for a work item (P4 slice S4, CHG-2026-10-19-007)
+
+Design: Ceres P4 (durable work items), chunk 4. A worktree may exist for a Ceres work item only when
+`ceres work check-worktree <item> --session-id <Ceres session>` allows it: the item is assigned or
+in_progress, it is a code item, it has no hold, the claimant's agent is its assignee, and in quorumbooks its
+`jira:QB-<n>` ref is attached. Ceres decides; sentinel asks (`bin/worktree_gate.py`).
+
+1. **Claim with the item.** `worktree-lock.sh claim ... --work-item <item id> --ceres-session <your
+   preflighted Ceres session id> [--work-namespace <ns>]` runs the check and refuses the claim, recording
+   nothing and pushing no marker, when Ceres says no; the failed condition is printed. `--ceres-session` is the
+   `agent_preflight` session, not `--session-id`: that stays the Claude Code hook id the guard matches on
+   (`CERES_SESSION_ID` in the environment stands in for the flag). The lock file (`latest-<slug>.json`) and
+   its ledger line then carry `work_item`, `work_namespace` and `work_item_verified`, and the Ceres queue record
+   carries `work_item`.
+2. **Phased rollout: `warn` by default.** Today no work items exist and no agent claims with one, so a
+   claim or a `git worktree add` that names NO work item only warns. The mode is the first word of
+   `governance/rules/worktree-gate-mode.txt` (`warn` | `require`). The file decides; the environment can only
+   raise it to `require` (`WORKTREE_GATE_MODE=require`), and any other value there is ignored, so a session cannot
+   switch the gate off. **To turn the refusal on, change that word to `require` in a reviewed commit.** The switch
+   governs only a MISSING item: an item that is named and fails its check is refused in both modes.
+3. **The create guard** (`bin/hook-worktree-guard.py`, the existing `Bash` hook): a `git worktree add`, and
+   the `EnterWorktree` tool when it creates (a `name`, not a `path`), is read as a creation. No lock can exist
+   for a path that does not exist yet, so the evidence of a work item is the command naming one
+   (`WORKTREE_WORK_ITEM=<id> WORKTREE_CERES_SESSION=<id> git worktree add ...`, or those variables in the hook's
+   environment), checked with `ceres work check-worktree`; or the calling session already holding a live lock that
+   carries a `work_item`. With neither: `warn` prints a warning (hook JSON `systemMessage` plus
+   `additionalContext`; no `permissionDecision`) and `require` blocks (exit 2). A named item that fails is blocked
+   in both modes.
+4. **Ceres unreachable fails open in `warn` mode, never silently.** No `ceres` binary, no answer in time
+   (`WORKTREE_GATE_CHECK_TIMEOUT`, default 15 s, never less than 5; the hook uses at most 10), a database failure, or
+   a CLI without the subcommand: under `warn` the claim or the add goes ahead UNCHECKED, prints a warning, and appends
+   a `worktree.unverified` line to `logs/worktree-locks/events.jsonl` (path registered in `canonical-paths.md`).
+   Under `require` a **claim** whose check is unverified is refused (the event is still written, marked
+   `refused`), so a down Ceres, a missing binary or a short timeout is no way past it; the **create guard** still
+   fails open there, as design chunk 4 has it. An answer from Ceres (exit 3, or exit 1 with a JSON error such as an
+   unknown item) is never a fail-open.
+5. **Backstop: `UNASSIGNED-WORKTREE`** in the daily lock report (`worktree-lock-report.sh`): a live lock with no
+   `work_item`, or whose item (`ceres work show`, read-only) is not assigned/in_progress, is on hold, is not a code
+   item or no longer exists. Under `warn` these are listed in an "Advisory" section, not counted and not notified
+   (every lock claimed before the gate would fire it); under `require` they are findings. An item the report cannot
+   read is a Warning line. In either mode the report also lists, as findings, every `worktree.unverified` and
+   `worktree.guard_error` event of the last 24 hours (`GATE-UNVERIFIED`, `GATE-GUARD-ERROR`) and every live lock claimed
+   with `work_item_verified: false` (`WORK-ITEM-UNVERIFIED`), and counts those locks in its header.
+
+**Not wired by this change (settings are JP's).** To make Claude Code call the create guard for the
+`EnterWorktree` tool, `~/.claude/settings.json` needs a second `PreToolUse` entry with `"matcher":
+"EnterWorktree"` running `$HOME/dev/sentinel/bin/hook-worktree-guard.sh` (the Python already handles that tool
+name). Whether the matcher fires for that tool name is UNVERIFIED.
+
+**Agent isolation (`isolation: "worktree"`): documented as NOT going through `EnterWorktree`; the guard does not
+see it.** Claude Code's hooks reference (`code.claude.com/docs/en/hooks`, read in full 2026-10-19) lists the cases
+in which the `WorktreeCreate` event fires as separate bullets: `claude --worktree`; "Claude creates a worktree during
+a session and switches into it with the `EnterWorktree` tool"; "A subagent uses `isolation: "worktree"`"; a workflow
+agent; a background session; `remote-control` in `worktree` mode. It adds: "When Claude runs `git worktree add`
+through the Bash tool rather than calling `EnterWorktree`, your WorktreeCreate hook doesn't run", and that
+configuring a `WorktreeCreate` hook "replaces that default git behavior". So a subagent's isolated tree is made by
+Claude Code itself, not by an `EnterWorktree` call or a `Bash` command, and neither `PreToolUse` matcher sees it.
+UNVERIFIED by a live run (no agent was spawned, by instruction): this is the documentation's reading, and no local
+transcript showed an `EnterWorktree` call or an `isolation` value to compare. `WorktreeCreate` is not a guard
+point: wiring it makes the hook responsible for creating the tree. Only the claim (item 1) and the report
+(item 5) cover a subagent's tree.
+
+**Limits.**
+- The Desktop app and subagents create their tree before a hook runs; Codex and Open WebUI are bound by this rule only.
+- Agent names are self-declared at preflight, and Ceres compares the item's assignee with that name, so a cooperative
+  agent can preflight as the item's assignee and pass the check
+  ([sentinel-memory-os#433](https://github.com/FinTechGlobalSolutions/sentinel-memory-os/issues/433)).
+- Once a session holds one live lock that carries any `work_item`, its later `git worktree add` calls pass the create
+  guard without naming one.
+- A claim with a made-up item id is refused by Ceres, but one with no item is only warned until `require` is on.
+  `takeover` keeps the lock's `work_item` without re-checking it; a same-session re-claim with no `--work-item` keeps
+  it too.
+- `logs/worktree-locks/events.jsonl` is not rotated. Rotation of the shared logs is a follow-up. The report reads only
+  the last 24 hours of it.
+- Until a claim can be made before the tree exists, `require` makes every unannotated `git worktree add` a block.
+- A guard that fails inside (a missing or broken `worktree_gate.py`) lets the creation through, but says so to the
+  model and JP and writes a `worktree.guard_error` event; the report lists it.
+- Flipping `worktree-gate-mode.txt` changes a rule file. Make the flip in a reviewed commit. Gate receipts
+  (`gate-receipt.sh`, `hook-gate-guard.sh`) fingerprint only `governance/AGENTS.md` and `governance/rules/*.md`, so
+  the `.txt` flip does not by itself void them (probed 2026-10-19); the edits to `git-workflow.md` and
+  `canonical-paths.md` that introduce the gate do, and every session needs a fresh receipt after they land.
+
 ## Closeout guard — mechanical block on lazy/lossy closeout (ratified 2026-08-26)
 
 Every governance control above this line about PR review and merge discipline was
