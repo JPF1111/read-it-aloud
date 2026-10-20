@@ -110,6 +110,18 @@ to be guessed at.
 Earlier `Session Statistics Closeout — …` notes stay at the vault root as audit trail (D-086);
 new close-outs go to `Session Closeouts/`.
 
+## Worktree lock registry and gate (recorded 2026-10-19, CHG-2026-10-19-007, git-workflow.md "Worktree lock" and "Worktree gate")
+
+| Thing | Path |
+|---|---|
+| Lock registry directory (`worktree_lock_dir`, the Ceres setting, on sentinel-memory-os main through #438 and unreleased; gitignored, local to this machine) | `~/dev/sentinel/logs/worktree-locks/` |
+| One live-lock file per worktree (read by the guard hook, the daily report and Ceres' status report; carries `work_item`, `work_namespace`, `work_item_verified` when a claim named a work item) | `~/dev/sentinel/logs/worktree-locks/latest-<slug>.json` |
+| Append-only lock ledger | `~/dev/sentinel/logs/worktree-locks/locks.jsonl` |
+| Gate event log, append-only, one JSON object per line. The `worktree.unverified` events are written here: a claim or a `git worktree add` that named a work item passed WITHOUT a Ceres check because Ceres could not be asked. No spool or event directory existed for this, so it lives in the lock directory | `~/dev/sentinel/logs/worktree-locks/events.jsonl` |
+| Cross-machine marker record per worktree; daily drift report | `~/dev/sentinel/logs/worktree-locks/marker-<slug>.json` · `report-<date>.md` |
+| Worktree gate mode switch (`warn` or `require`; the only place the phased rollout is set) | `~/dev/sentinel/governance/rules/worktree-gate-mode.txt` |
+| Gate logic shared by the lock tool, the guard hook and the report | `~/dev/sentinel/bin/worktree_gate.py` |
+
 ## Fabric pattern library (added 2026-10-06, CHG-2026-10-06-004)
 
 JP's **AI Fabric Patterns** library (operator docs: `docs/ai-fabric-patterns.md`): reusable Fabric prompt patterns for the Fabric CLI (`fabric-ai`, Homebrew), Obsidian (Mesh AI plugin) and
@@ -262,6 +274,42 @@ Ruled on rather than left ambiguous:
   deletion is a JP call). `~/dev/code/netgear` is not a git repository and was never governed. Encoded as a
   name-based skip in `bin/gov-exempt-repos.sh`'s `EXEMPT_REPOS` (`CHG-2026-10-04-001`).
 
+## Pons — remote MCP access for cloud sessions (recorded 2026-10-19, CHG-2026-10-19-004)
+
+JP approved ("Yes go on this plan", "also read/write", 2026-10-19) giving claude.ai/code web sessions read/write
+access to Ceres and the Obsidian vault through Cloudflare. Outbound-only: no inbound port is opened.
+
+| Thing | Value |
+|---|---|
+| Cloudflare tunnel | `Pons`, id `a9f2b9e9-c974-4ec4-99dc-0fab94666205`, account `ba2aaa84c8ce107c2a6c1385adc9b60d` (J P Finleys Account), zone jpfinley.com |
+| Tunnel config | `~/.cloudflared/config.yml` (credentials `~/.cloudflared/<id>.json` and `cert.pem`, mode 600; never commit, never print) |
+| Ceres MCP, remote | `https://ceres.jpfinley.com/mcp` → `http://127.0.0.1:9001` (Streamable HTTP, `ceres mcp --transport streamable-http`; no auth of its own, so Cloudflare Access is its only gate) |
+| Vault MCP, remote | `https://vault.jpfinley.com/mcp` → `http://127.0.0.1:27127` (the Pons vault proxy) → `https://127.0.0.1:27126` (the Semantic Vault MCP; proxy verifies the origin cert against `~/.claude/certs/obsidian-semantic-vault.pem`; Obsidian must be open) |
+| Vault proxy | `~/.pons/vault-proxy.py` (mode 700, stdlib Python, listens 127.0.0.1:27127 only). Replaces the request's `Authorization` with the vault's bearer token from `~/.pons/vault-auth` (mode 600, dir 700; the value is the `obsidian-semantic` entry's header in `~/.claude.json`; never print, copy into the repo, Cloudflare or a connector field) and streams the response back. Added 2026-10-19 (CHG-2026-10-19-005) because the vault's own token and Access's OAuth token both use `Authorization`; origin answered 401 without it. Tunnel config before the change: `~/.cloudflared/config.yml.pre-proxy` |
+| Access | two Self-hosted applications, `Pons - Ceres MCP` and `Pons - Vault MCP`; policy `JP only (email)`, Allow, `j.p.finley@icloud.com`; login by Cloudflare one-time PIN (no identity provider is configured; JP chose this 2026-10-19); Managed OAuth on, redirect URI `https://claude.ai/api/mcp/auth_callback` plus localhost and loopback clients, grant session 2 weeks, access token 15 minutes |
+| LaunchAgent | `com.cloudflare.cloudflared` (`~/Library/LaunchAgents/com.cloudflare.cloudflared.plist`): `cloudflared --no-autoupdate tunnel run Pons`, RunAtLoad, KeepAlive on failure, logs `~/Library/Logs/com.cloudflare.cloudflared.{out,err}.log`. Per-user, so it runs only while JP is logged in. The installer's plist ran a bare `cloudflared`, which exited at once; ProgramArguments were edited to run the tunnel |
+| Proxy LaunchAgent | `com.pons.vault-proxy` (`~/Library/LaunchAgents/com.pons.vault-proxy.plist`): `/opt/homebrew/bin/python3 ~/.pons/vault-proxy.py`, RunAtLoad, KeepAlive, logs `~/Library/Logs/com.pons.vault-proxy.{out,err}.log`. Per-user, same logged-out limit as the tunnel |
+| DNS | proxied CNAMEs `ceres` and `vault` → the tunnel. Apex and `www` are Vercel's and were not touched |
+
+**Status (2026-10-19): gate verified; both connectors authenticated end to end through Access.** Ceres: JP's sign-in worked and a decision write through it succeeded (memory f0940515). Vault: after a retry (first attempt hit "Invalid nonce" on a stale Access sign-in tab), the connector reached the Semantic Vault MCP 0.12.9 through the proxy (`system info` returned). Rejection of other emails is not tested. Unauthenticated requests to both hostnames get `401` from Access. The sanction above is JP's statement in a session transcript that is not openable from this repo.
+
+**Vault auth (2026-10-19, CHG-2026-10-19-005).** The vault MCP has its own bearer token, which Access does not supply; called without it the origin answered 401. JP approved ("go") a local proxy that adds the token. Through the proxy, a local `initialize` returns 200; both public hostnames still return 401 from Access. The token now lives in `~/.pons/vault-auth`; never put it in Cloudflare config, a repo file or a connector field without JP's approval. Proxy necessity was checked 2026-10-19: the origin returns 401 with no token and with a wrong bearer token, and Access's OAuth token is not the vault token, so the proxy stays unless the vault plugin's own auth is changed. To re-test, point the `vault` ingress route back at `https://127.0.0.1:27126` (needs `caPool` and `originServerName: localhost`) and reconnect; a 401 means the proxy is still required. If the proxy is down the vault route returns 502 (fail closed).
+
+**Risk and rules for future agents.** Ceres MCP has no origin auth, so Access is the only thing between the internet and
+read/write Ceres (including its owner tools). A policy edit, a deleted app, or an extra hostname or ingress route for
+`:9001` exposes it. Do not widen the policy, add routes to `config.yml`, or disable Access without a new CHG signed by JP.
+Localhost and loopback redirect URIs let a local client complete OAuth, which was JP's chosen setting (his task
+instruction); it is not a reason to loosen the rest.
+
+**Restore / rollback.** The plist and `config.yml` are machine state, not in this repo. Do not rerun the bare
+`cloudflared service install`: it writes a plist that runs `cloudflared` with no arguments, which exits. Keep
+`ProgramArguments` as above. To roll back: `launchctl bootout gui/$(id -u)/com.pons.vault-proxy` (then delete `~/.pons`) and `launchctl bootout gui/$(id -u)/com.cloudflare.cloudflared`, delete the two DNS
+records, delete the two Access applications, then `cloudflared tunnel delete Pons` (each needs JP's go).
+
+Remote access is unavailable while JP is logged out (per-user agent), despite KeepAlive. Port 9000 is not exposed by Pons.
+
+Not recorded here: the cloud-side connector entries (`claude.ai/customize/connectors`), which are JP's to add.
+
 ## Hard placement constraints (learned, non-negotiable)
 
 - **Sentinel MUST live at `~/dev/sentinel`, NOT under `~/Documents`.** macOS TCC blocks
@@ -358,8 +406,11 @@ its REJECTED-then-adopted reasoning are left intact, not deleted.
 | ceres-open-webui | 8080 | 127.0.0.1 only | |
 | ceres-opensearch-dashboards | 5601 | 127.0.0.1 only | |
 | **Other** | | | |
+| Ceres API (`ceres api`) | 9000 | 127.0.0.1 only | Not exposed by Pons. Observed live 2026-10-19 (`lsof`); no row existed. Pid held by the `ceres` uv tool. Whether it is running is a live check. |
+| Ceres MCP (`ceres mcp --transport streamable-http`, LaunchAgent `io.ceres.memory.mcp`) | 9001 | 127.0.0.1 only | Observed live 2026-10-19; no row existed. `POST /mcp` answers an unauthenticated `initialize`: no origin auth. Tunnelled to `ceres.jpfinley.com` by Pons (section above). |
 | Obsidian Local REST API | 27124 | — | |
 | Obsidian Semantic Notes Vault MCP (`semantic-vault-mcp` plugin) | 27126 (HTTPS) | 127.0.0.1 only | Registered 2026-10-06 (CHG-2026-10-06-008, -009). HTTPS only: with HTTPS on, the plugin serves HTTPS alone, so its HTTP setting (27125) is inert — 27125 stays reserved to this plugin, not free. Plugin defaults (HTTP 3001, HTTPS 3443) are not used; 3001 is the Quorum Books api. Claude Code user-scope MCP entry `obsidian-semantic` → `https://127.0.0.1:27126/mcp`; the plugin's self-signed cert is trusted via `NODE_EXTRA_CA_CERTS` = `~/.claude/certs/obsidian-semantic-vault.pem` in `~/.claude/settings.json` (cert expires 2027-10-07; re-export it if the plugin regenerates it). Separate from the `obsidian` entry (Local REST API, 27124). |
+| Pons vault proxy (`~/.pons/vault-proxy.py`, LaunchAgent `com.pons.vault-proxy`) | 27127 | 127.0.0.1 only | Registered 2026-10-19 (CHG-2026-10-19-005). Adds the vault bearer token and forwards to 27126; the tunnel's `vault.jpfinley.com` route points here. |
 | Obsidian Task Genius MCP (`obsidian-task-progress-bar` plugin, Task Genius) | 7777 | 127.0.0.1 only | Registered 2026-10-06 (CHG-2026-10-06-010); in use before it was recorded. Bearer-token auth (unauthenticated request → 401). Claude Code MCP entry `prosperity-springs-tasks`. |
 | MLX LM server (`mlx_lm.server`, OpenAI-compatible) | 8082 | 127.0.0.1 only | Registered 2026-10-16 (CHG-2026-10-16-001). LaunchAgent `com.jpfinley.mlx-lm-serve` (wrapper `~/.local/bin/mlx-lm-serve`, logs `~/.local/state/mlx-lm-serve/`), venv `~/.venvs/mlx-lm` (Python 3.12, `mlx-lm` 0.32.2), model `mlx-community/Meta-Llama-3.1-8B-Instruct-abliterated-4bit` from the Hugging Face cache. No auth: it must never bind beyond 127.0.0.1. 8082 was verified free on 2026-10-16 (`lsof -nP -iTCP:8082 -sTCP:LISTEN` returned nothing); 8080 (`ceres-open-webui`) and 8081 were both held. Finding the same day, recorded here because [sentinel#146](https://github.com/FinTechGlobalSolutions/sentinel/pull/146) removes the 8081 row: 8081 was held by the native Open WebUI desktop app (`~/Library/Application Support/open-webui`, `open-webui serve --port 8081`), outside Ceres; this row does not change it. Whether the server is running is a live check (`launchctl print gui/$(id -u)/com.jpfinley.mlx-lm-serve`, `lsof -i :8082`), never implied by this row. |
 | Fabric REST API (`fabric-ai --serveOllama`) — **reserved** | 8090 | 127.0.0.1 only | For LaunchAgent `com.jpfinley.fabric-serve` (wrapper `~/.local/bin/fabric-serve`, key from Keychain `fabric-serve`/`api-key`). Reserved 2026-10-06 (CHG-2026-10-06-004); whether it is running is a live check (`launchctl print`, `lsof -i :8090`), never implied by this row. 8080 is `ceres-open-webui`. |
