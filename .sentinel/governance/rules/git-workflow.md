@@ -302,10 +302,15 @@ project, no hook is edited or disabled, and no other push is affected).**
   the marker this machine pushed. `claim` adopts, and `release` deletes, only a ref that still
   points at that SHA. The record holds one entry per branch the worktree has claimed; an entry is
   written just before the push and removed only when that marker is known to be gone; `release`
-  removes every marker on record for the worktree. A marker with no entry is deleted by name in
-  one case only: it points at a commit of this repository that has files in it, which is what
-  the tool pushed (the branch `HEAD`) before 2026-09-28. Nothing else is touched
-  (CHG-2026-09-29-003).
+  removes every marker on record for the worktree. **A marker with no entry is never deleted, by
+  name or otherwise** (QB-610, CHG-2026-10-23-001; JP's ruling of 2026-10-09 that he never wants a
+  "wip" deleted out from under a session, as relayed in the task brief; the authoring session did
+  not read it first-hand). A lock with nothing on record leaves origin untouched: `release` makes no call
+  to origin for it, and (where origin is JP's) prints the ref it left in place and the
+  `git ls-remote origin <ref>` command that shows it. Removing such a marker is JP's call; no agent deletes a `refs/wip-locks/*` ref by
+  hand. (CHG-2026-09-29-003 had kept one deletion by name, for a commit of this repository with
+  files in it, the old-style marker. It could not tell whose marker it was, and could delete
+  another machine's. It is gone.)
 - **A claim is all or nothing.** Order: marker, Ceres record, local registry. If a later step fails
   the marker is taken back; if it cannot be taken back, re-running the same claim adopts it.
   `release` and `takeover` change nothing, locally or on origin, unless the Ceres record was
@@ -315,20 +320,19 @@ project, no hook is edited or disabled, and no other push is affected).**
 - **Limits:** a marker push typed by hand runs the hook like any other push. A `release` whose
   delete fails still releases locally and leaves a stale marker: the next claim of that worktree
   from the same machine adopts it, every other claim of that branch name is refused until it is
-  removed; running the same release again retries. A lock claimed before 2026-09-28 has nothing
-  on record, and a re-claim by its owner is refused by its own marker until the lock is released
-  and claimed again. The deletion by name applies to any lock with nothing on record for its
-  branch, and it cannot tell whose old-style marker it is: one pushed by another machine that
-  still runs the tool as it was before 2026-09-28 is deleted too, when its commit is in this
-  repository. An old-style marker whose commit is no longer in this repository, and a marker
-  whose record was lost, are left on origin. No marker is used when `origin` does not fetch from
-  and push to one and the same repository; a claim or release made in that state leaves the
-  record as it is. The check that a marker is this machine's and its deletion are two calls, not
-  one. A release made after `git worktree remove` reaches origin through the repository named
-  in the record; a lock with nothing on record, or whose record was written before
-  CHG-2026-09-29-003 and names no repository, cannot: release before removing the worktree. The
-  record is kept per worktree name: two worktrees of the same name in different repositories
-  share one.
+  removed; running the same release again retries. **A lock claimed before 2026-09-28 has nothing
+  on record, so its marker stays on origin when the lock is released, until JP removes it**: the
+  old-style marker (the branch's own commit, which is what the tool pushed then) is not deleted
+  by name any more (QB-610). Until it is removed, a re-claim by that lock's owner is refused by
+  its own marker, and so is every claim of that branch name. The same holds for a marker whose
+  record was lost. The price of never deleting what this machine did not record is that these
+  pile up; the gain is that no release can take another machine's marker. No marker is used when
+  `origin` does not fetch from and push to one and the same repository; a claim or release made in
+  that state leaves the record as it is. The check that a marker is this machine's and its
+  deletion are two calls, not one. A release made after `git worktree remove` reaches origin
+  through the repository named in the record; a record written before CHG-2026-09-29-003 names
+  no repository and cannot: release before removing the worktree. The record is kept per
+  worktree name: two worktrees of the same name in different repositories share one.
 
 **Honest limits, stated so no one mistakes this for a wall:** the hook binds Claude Code
 sessions only — Codex, Aider, or a bare shell are bound *normatively* by this rule and
@@ -1244,9 +1248,13 @@ means nothing is owed in either direction.
   `bin/gitpush.py`, so text that merely mentions a push (a commit message, an echo, a heredoc, a
   `git+ssh://` URL) is not a push. **Other stated limits:** the hooks do not see a push inside a
   script, alias, shell function or `make`-style runner, or from another vendor's tool. When the
-  ownership guard cannot tell which repo a push runs in (an unresolved `$VAR` in a `cd`) or cannot
-  parse the command, it allows that push with a warning; the force-push ban and the origin/main rule
-  do not depend on the repo and still apply (to an unparseable command by its text). A `gh pr create`
+  ownership guard cannot tell which repo a push runs in (an unresolved `$VAR` in a `cd`), it allows
+  that push with a warning; the force-push ban and the origin/main rule do not depend on the repo and
+  still apply. A command its first reader cannot lex (an apostrophe in a `# comment`) is read again
+  the way bash reads it, so its real pushes are judged like any other and prose that mentions a push
+  is not; a `git push` in text no reader can read (an unbalanced quote) is blocked by all three
+  rules alike, with "run the push as a command of its own" (sentinel #119; until then the ownership
+  guard allowed such a push and the other two matched the raw text). A `gh pr create`
   or `gh api` write against a foreign repo is blocked only because it needs a pushed branch first.
   Why it exists: on 2026-09-28 a sync wrote generated law into clones of `Subfly/YABA` and
   `headroomlabs-ai/headroom` (replacing a tracked upstream file in one, prepending a line to another)
