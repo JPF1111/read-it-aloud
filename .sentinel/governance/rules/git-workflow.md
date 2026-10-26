@@ -270,8 +270,10 @@ pattern.
   hook wired machine-wide via `~/.claude/settings.json` and in the sentinel repo. Blocks
   (exit 2) destructive commands — `git worktree remove`, `git branch -d/-D`, recursive
   `rm` — whose target resolves to a worktree locked by a *different* session. The owner is
-  never blocked; unlocked trees are never blocked; unresolvable `rm` targets warn-don't-block
-  (a false-positiving guard gets unwired, which is worse than the gap). Fails open.
+  never blocked; unlocked trees are never blocked. Unresolvable targets are conservatively
+  blocked only when the command runs inside the locked worktree; otherwise the parser allows
+  them. Malformed lock records are skipped with an explicit warning. The guard fails open on
+  internal errors.
 - Daily audit: `bin/worktree-lock-report.sh` (LaunchAgent
   `com.sentinel.worktree-lock-report`, 07:17) scans the roots in
   `governance/rules/worktree-roots.txt` and flags **LOCK-ORPHAN** (live lock, tree gone =
