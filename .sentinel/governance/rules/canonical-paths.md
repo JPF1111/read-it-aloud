@@ -122,6 +122,25 @@ new close-outs go to `Session Closeouts/`.
 | Worktree gate mode switch (`warn` or `require`; the only place the phased rollout is set) | `~/dev/sentinel/governance/rules/worktree-gate-mode.txt` |
 | Gate logic shared by the lock tool, the guard hook and the report | `~/dev/sentinel/bin/worktree_gate.py` |
 
+## Ceres work-item feeds (recorded 2026-10-24, CHG-2026-10-24-001, Ceres Remarkable P4 S5/S6)
+
+Two directories carry records into Ceres work items (`ceres work`). Each row names who writes the
+directory and who reads it, so neither side guesses a path.
+
+| Thing | Path |
+|---|---|
+| **Watcher attention directory** (the `ceres` profile of `ceres-issue-watch`): one `<key>.attention` file per open item that needs a person, as `key=value` lines (`key`, `kind`, `issue`, `pr`, `opened_at`, `opened_epoch`, `summary`); the watcher removes the file when the cause clears. Local to this machine, gitignored under `logs/`; present and empty when checked on 2026-10-24. **Producer:** [`bin/ceres-issue-watch.sh`](https://github.com/FinTechGlobalSolutions/sentinel/blob/8b4b2e1/bin/ceres-issue-watch.sh), function `attention_open()` (writes the file with `record_set`, line 1109; `ATTN_DIR` is set at line 326; line 138, which the P4 brief named, is the header comment that documents the format, not the writing code). **Consumer:** `ceres work ingest attention`, which reads the directory named by `CERES_ATTENTION_DIR` (Ceres setting `attention_dir`, default this path) and never writes it; `bin/sentinel-service` runs it every 5 minutes, only while the mode file below says `on`, through [`bin/ceres-attention-ingest.sh`](https://github.com/FinTechGlobalSolutions/sentinel/blob/8b4b2e1/bin/ceres-attention-ingest.sh) | `~/dev/sentinel/logs/ceres-issue-watch/attention` |
+| **Attention-ingest job switch.** First word `on` runs the job; anything else, or no file, is off. Ships `off`; turning it on is a reviewed commit. The environment cannot turn it on | `~/dev/sentinel/governance/rules/attention-ingest-mode.txt` |
+| **Attention-ingest job state** (written by `bin/ceres-attention-ingest.sh`, gitignored, local to this machine): last run's status JSON; the state file (last good fingerprint, failure back-off count, any orphaned session still to be closed out); the in-progress lock directory | `~/dev/sentinel/logs/service/ceres-attention-ingest.json` · `ceres-attention-ingest.state` · `ceres-attention-ingest.lock/` |
+| **Ceres work-capture spool**, landing with Ceres P4 S5 (**not merged yet; the directory does not exist on this machine as of 2026-10-24**, Ceres creates it). **Producer:** `ceres work capture`, the hook entry point, which fails open into this spool when it cannot write the item inside its time budget. **Consumer:** `ceres work capture --drain` | `~/.local/state/ceres/work-capture-spool/` |
+
+**Not covered by the first row.** The watcher's `sentinel` profile writes to
+`~/dev/sentinel/logs/ceres-issue-watch/sentinel/attention` (`P_STATE_DIR` for that profile in
+`bin/ceres-issue-watch.sh`); that directory does not exist on this machine, so the profile has not run
+here. Ceres ingests only its configured `attention_dir`, and a write run refuses any other directory, so
+nothing ingests the sentinel profile's items today. Not fixed here: it needs a second ingest
+configuration or a Ceres change.
+
 ## Fabric pattern library (added 2026-10-06, CHG-2026-10-06-004)
 
 JP's **AI Fabric Patterns** library (operator docs: `docs/ai-fabric-patterns.md`): reusable Fabric prompt patterns for the Fabric CLI (`fabric-ai`, Homebrew), Obsidian (Mesh AI plugin) and
