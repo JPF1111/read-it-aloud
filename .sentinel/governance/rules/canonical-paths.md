@@ -209,7 +209,7 @@ Ruled on rather than left ambiguous:
   `bin/govcheck`, and by `bin/govland` as of `CHG-2026-09-21-003`). If this repo ever gets a
   real default branch, lift the exemption and let it be governed like its peers.
 
-- ⛔ **`~/dev/code/YABA`** — EXEMPT (**ruled 2026-09-28: JP — "exempt YABA"**). A clone of
+- ⛔ **`~/dev/code/external/YABA`** — EXEMPT (**ruled 2026-09-28: JP — "exempt YABA"**). A clone of
   `github.com/Subfly/YABA`, someone else's project; GitHub answered 403 to the push, so nothing
   reached that repo (no PR, branch or marker ref of ours exists there — checked). Before the
   exemption `govsync` had written into the working tree: it prepended `@AGENTS.md` to the tracked
@@ -222,8 +222,13 @@ Ruled on rather than left ambiguous:
   the list in `bin/gov-owned-accounts.txt`; `govsync`, `govcheck` and `govland` all ask
   `gov_exemption()` in `bin/gov-exempt-repos.sh`, so a repo that is not JP's is not written into,
   landed into or reported as drift (`govcheck` prints `exempt`). On disk on 2026-09-28:
-  `~/dev/code/headroom` (`headroomlabs-ai/headroom`) and `~/dev/code/ruflo` (`ruvnet/ruflo`), plus
-  YABA above. `headroom` had the same damage as YABA — its tracked `.github/copilot-instructions.md`
+  `~/dev/code/external/headroom` (`headroomlabs-ai/headroom`) and `~/dev/code/external/ruflo` (`ruvnet/ruflo`), plus
+  YABA above. **Moved 2026-10-23 (JP: "move any repo which is not my own to a subfolder in /dev/code")**
+  into `~/dev/code/external/`, with `~/dev/code/external/OGAD` (`off-grid-ai/OGAD`), `~/dev/code/external/rea`
+  (`morluto/rea`), `~/dev/code/external/taste-skill` (`Leonxlnx/taste-skill`, moved from under `mcp/`) and
+  `~/dev/code/external/diagram-design` (`cathrynlavery/diagram-design`, cloned that day) added to the set. Every one of these has its push URL set to `DISABLED`, so `git push` fails at the
+  remote layer, and no PR is opened from them. Pull is the only sync: a local reference copy, never
+  merged back to the original repo. `headroom` had the same damage as YABA — its tracked `.github/copilot-instructions.md`
   (upstream's own Copilot review policy) had been replaced by a symlink — and was restored the same
   day. `ruflo` was never written to: `govsync` refused its hand-authored `AGENTS.md`. `QuorumBooks`
   is on the owned list as the automation account whose credentials live in JP's keyring
@@ -241,7 +246,7 @@ Ruled on rather than left ambiguous:
   and 2026-09-07 is UNVERIFIED). Encoded as a name-based skip in `bin/gov-exempt-repos.sh`'s
   `EXEMPT_REPOS` (sourced by both `bin/govsync` and `bin/govcheck`).
 
-- ⛔ **[`~/dev/code/everything-claude-code`](file:///Users/jpfinley/dev/code/everything-claude-code)**
+- ⛔ **[`~/dev/code/external/everything-claude-code`](file:///Users/jpfinley/dev/code/external/everything-claude-code)**
   — EXEMPT (**ruled 2026-09-21: JP approved** — approved explicitly at 2026-09-21T13:28Z via the
   [Specula tracker board](https://claude.ai/artifact/2Wi2ufnbFwj4uUdjjxRjQP) (private artifact),
   relayed by the orchestrator. The ruling itself is recorded in Ceres as memory
@@ -285,12 +290,12 @@ Ruled on rather than left ambiguous:
   2026-10-04) stays; no further mirror is written, landed or reported as drift. Encoded as a name-based skip in
   `bin/gov-exempt-repos.sh`'s `EXEMPT_REPOS` (`CHG-2026-10-04-001`).
 
-- ⛔ **`~/dev/code/NGM6Update`** — EXEMPT (**ruled 2026-10-04: JP, live in chat — "the netgear one"
+- ⛔ **`~/dev/code/external/NGM6Update`** — EXEMPT (**ruled 2026-10-04: JP, live in chat — "the netgear one"
   should be ignored**). A fork of the Nighthawk M5 restore utility for the M6 series,
   `origin` = [`FinTechGlobalSolutions/NGM6Update`](https://github.com/FinTechGlobalSolutions/NGM6Update); not
   a venture repo. Its remote already holds an unmerged `chore/governance-sync-680c1a1` branch from an
   earlier landing attempt (one commit, generated files only); it was left in place, not deleted (branch
-  deletion is a JP call). `~/dev/code/netgear` is not a git repository and was never governed. Encoded as a
+  deletion is a JP call). `~/dev/code/external/netgear` is not a git repository and was never governed. Encoded as a
   name-based skip in `bin/gov-exempt-repos.sh`'s `EXEMPT_REPOS` (`CHG-2026-10-04-001`).
 
 ## Pons — remote MCP access for cloud sessions (recorded 2026-10-19, CHG-2026-10-19-004)
