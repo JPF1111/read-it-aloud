@@ -107,7 +107,8 @@ remain drafts until JP ratifies them.
 If the Keychain key is available, payloads land encrypted. If unavailable, intake MUST
 continue at `0700/0600` with `encryption: "deferred"`; the relay encrypts them on restored key
 access and monitoring alarms while any deferred envelope exists. Queue disk use alarms at
-75%. Managed submission rejects at 90% with an explicit actionable error.
+88% (JP, 2026-11-03; was 75%). High pressure is flagged at 95% (was 90%); intake refuses new
+envelopes only below the 256 MiB free-space reserve, with an explicit actionable error.
 
 Drain semantics:
 1. The optional LaunchAgent validates landed envelopes, encrypts deferred payloads when
