@@ -144,10 +144,52 @@ Drain semantics:
    - the replaced text is journaled in the audit trail and in memory, and kept in the processed
      envelope.
 
-   Entries in a sealed archive, and entries Ceres did not place, cannot be amended. Correcting
-   one of those still takes a new entry (see the sealed-archive policy below). Before this
-   ruling, a new entry was the only way to correct a placed one, and that is how D-249
-   inherited a false status header of its own.
+   **An entry Ceres placed whose `ceres-proposal` marker was lost can be amended with
+   `--unmarked`.** (**Sanctioned by:** PROPOSED — awaiting JP (code-owner review on
+   [sentinel#190](https://github.com/FinTechGlobalSolutions/sentinel/pull/190)); JP's code-owner
+   review is his sanction. The drafting agent was told JP ruled on 2026-10-24 but did not see it
+   first-hand and found no words of his in the sources, so none are quoted. Primary evidence: JP
+   has since used the path himself: he TOTP-ratified the D-214 `--unmarked` amendment
+   `a4b6f202-8260-4cb7-bafb-19f2266e6e16` (rejected by the write gate, see
+   [sentinel-memory-os#479](https://github.com/FinTechGlobalSolutions/sentinel-memory-os/pull/479)),
+   and D-214 now carries `Amended: 2026-10-31 (ceres outbox ratify
+   a3215a43-e9f1-4056-a5bf-3a725a4d1106)`. Implemented by
+   [#470](https://github.com/FinTechGlobalSolutions/sentinel-memory-os/pull/470) and #479 for
+   [#388](https://github.com/FinTechGlobalSolutions/sentinel-memory-os/issues/388) item 5;
+   cause in [#475](https://github.com/FinTechGlobalSolutions/sentinel-memory-os/issues/475).)
+   The 2026-09-07 register rotation left D-214 without its marker (the marker went into the
+   sealed archive), so the plain amend path refused it. `ceres outbox amend D-N --unmarked`
+   (shipped in Ceres v0.5.80, whose manifest fails `ceres version verify`, so use v0.5.81 or
+   later; the duplicate-ID write-gate fix is in v0.5.82) amends such an entry in place, under
+   its own ID, and stamps a marker so it amends the normal way afterwards. It adds these
+   conditions to the list above; none is relaxed:
+   - the entry must carry the status line the drain writes (`Ratified through Ceres governed
+     drain`); an entry without that exact line (a hand-written one such as D-228) is refused.
+     Ceres cannot tell a copied line from a real one, so the line is evidence, not proof;
+   - the heading must match exactly one entry in the active register, and the draft is bound to
+     the SHA-256 of the entry's bytes from its heading down;
+   - at least one `--source-ref` must verify as durable (`commit:<sha>`, a pull URL, a whole
+     `vault:` note under the read limit (not a section of a large one), a repo path at a commit;
+     `ceres://` and plain URLs do not), checked when the draft is made and again by
+     `ceres outbox ratify` before JP's code is requested;
+   - owner TOTP ratification, the single sanction line, the header and Sources refusals, the
+     `Amended` stamp and the `Amendments` history are unchanged.
+
+   **From v0.5.82, for every amendment (not only `--unmarked`):** the write gate also runs on
+   the amended entry when it is drafted and again before the code is requested. At the drain, a
+   `DUPLICATE_OR_AMBIGUOUS_CANON` objection that names only the entry's own ID as the duplicate
+   is overridden when Ceres counts exactly one entry of that ID in the register and in the
+   amended text and no other entry ID changes. Any other objection stands, and so does a real
+   duplicate; the override is recorded in the drain result's warnings.
+   (Checked against `governed_amendments.py`: `duplicate_objection_overridden`,
+   `drain_amendment`, `governance_refusal`.)
+
+   Entries in a sealed archive are never amended: `ceres outbox amend` refuses an archive-named
+   note, a note with `status: sealed` frontmatter, and a read-only file, with or without
+   `--unmarked`. Entries without the drain's status line (hand-written ones, such as D-228) are
+   refused, `--unmarked` included; correcting those, and sealed ones, still takes a new entry
+   (see the sealed-archive policy below). Before these rulings, a new entry was the only way to
+   correct a placed one, and that is how D-249 inherited a false status header of its own.
 5. Successful envelopes move to `processed/` permanently as provenance. Control rejections
    move to `rejected/` with a machine-readable reason. Uncertain integrity failures move to
    `quarantine/`; the Strategist chair owns resolution and monitoring alarms at 24 hours.
